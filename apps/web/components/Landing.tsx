@@ -5,17 +5,17 @@ import { ArrowDown, ArrowRight, ArrowUpRight, BookOpen, Braces, Code2, Cpu, File
 import PublicShell from './PublicShell';
 
 const personas = [
-  { id: 'daily', title: 'Smart Companion', label: 'Think & explore', description: 'Temukan sudut pandang baru. Diskusikan ide, susun rencana, dan selesaikan pertanyaan sehari-hari.', icon: MessageCircle },
-  { id: 'report', title: 'Academic Writer', label: 'Research & write', description: 'Dari kerangka awal hingga analisis. Susun laporan dan tulisan akademik dengan alur yang lebih terarah.', icon: FileText },
-  { id: 'coding', title: 'Coding Expert', label: 'Build & understand', description: 'Pahami logikanya, pecahkan masalahnya. Tulis kode, telusuri bug, dan pelajari konsep teknis bersama AI.', icon: Braces },
+  { id: 'daily', title: 'Smart Companion', label: 'Think & explore', description: 'Temukan sudut pandang baru. Diskusikan ide, susun rencana, dan selesaikan pertanyaan sehari-hari.', tags: ['Brainstorming', 'Rencana belajar', 'Diskusi cepat'], icon: MessageCircle },
+  { id: 'report', title: 'Academic Writer', label: 'Research & write', description: 'Dari kerangka awal hingga analisis. Susun laporan dan tulisan akademik dengan alur yang lebih terarah.', tags: ['Kerangka laporan', 'Analisis', 'Ringkasan materi'], icon: FileText },
+  { id: 'coding', title: 'Coding Expert', label: 'Build & understand', description: 'Pahami logikanya, pecahkan masalahnya. Tulis kode, telusuri bug, dan pelajari konsep teknis bersama AI.', tags: ['Debug', 'Logika algoritma', 'Sistem & IoT'], icon: Braces },
 ] as const;
 
 const officialLinks = [
-  ['https://tet.pcr.ac.id/', 'Website program studi', 'tet.pcr.ac.id'],
-  ['https://www.instagram.com/aetpcr/', 'Instagram', '@aetpcr'],
-  ['https://www.youtube.com/@AETPCR', 'YouTube', 'AETPCR'],
-  ['https://facebook.com/aetpcr/', 'Facebook', 'AET PCR'],
-];
+  ['https://tet.pcr.ac.id/', 'Program studi', 'tet.pcr.ac.id', 'PORTAL AKADEMIK'],
+  ['https://www.instagram.com/aetpcr/', 'Instagram', '@aetpcr', 'UPDATE & KARYA'],
+  ['https://www.youtube.com/@AETPCR', 'YouTube', 'AETPCR', 'VIDEO & DOKUMENTASI'],
+  ['https://facebook.com/aetpcr/', 'Facebook', 'AET PCR', 'ARSIP KOMUNITAS'],
+] as const;
 
 export default function Landing({ onSelectPersona }: { onSelectPersona: (persona: 'daily' | 'report' | 'coding') => void }) {
   return (
@@ -72,7 +72,7 @@ export default function Landing({ onSelectPersona }: { onSelectPersona: (persona
 
           <div className="hero-bottom">
             <span><Layers size={15} strokeWidth={2} />Tiga mode, sesuai kebutuhanmu</span>
-            <span><Cpu size={15} strokeWidth={2} />Pilihan model AI dalam satu tempat</span>
+            <span><Cpu size={15} strokeWidth={2} />AI adaptif dalam satu workspace</span>
             <span><BookOpen size={15} strokeWidth={2} />Bagian dari komunitas AET PCR</span>
           </div>
         </div>
@@ -85,21 +85,24 @@ export default function Landing({ onSelectPersona }: { onSelectPersona: (persona
               <div className="eyebrow"><span />Pilih ruang berpikirmu</div>
               <h2>Satu ide. Banyak kemungkinan.</h2>
             </div>
-            <p>Mulai dari yang kamu butuhkan hari ini.<br />Pilih mode untuk membuka percakapan.</p>
+            <p>Mulai dari yang kamu butuhkan hari ini.</p>
           </div>
           <div className="mode-grid">
             {personas.map((persona, index) => (
               <button className={`mode-card mode-${persona.id}`} key={persona.id} onClick={() => onSelectPersona(persona.id)} id={`chat-mode-${persona.id}`}>
                 <div className="mode-card-top">
                   <div className="mode-icon"><persona.icon size={22} strokeWidth={1.75} /></div>
-                  <span>0{index + 1} / AI MODE</span>
+                  <span className="mode-index"><i aria-hidden="true" />0{index + 1} / AI MODE</span>
                 </div>
                 <small>{persona.label}</small>
                 <h3>{persona.title}</h3>
                 <p>{persona.description}</p>
+                <div className="mode-tags" aria-hidden="true">
+                  {persona.tags.map(tag => <span key={tag}>{tag}</span>)}
+                </div>
                 <div className="mode-card-bottom">
                   <span>Mulai percakapan</span>
-                  <ArrowUpRight size={18} strokeWidth={2} />
+                  <span className="mode-card-arrow" aria-hidden="true"><ArrowUpRight size={17} strokeWidth={2.1} /></span>
                 </div>
               </button>
             ))}
@@ -109,22 +112,37 @@ export default function Landing({ onSelectPersona }: { onSelectPersona: (persona
 
       <section className="workflow">
         <div className="site-container workflow-layout">
-          <div>
+          <div className="workflow-intro">
             <div className="eyebrow"><span />Dari pertanyaan ke pemahaman</div>
             <h2>Mulai sederhana.<br />Kembangkan bersama.</h2>
             <p>AI sebagai rekan berpikir. Kamu tetap memegang arah, konteks, dan keputusan akhirnya.</p>
+            <div className="workflow-highlights">
+              <div>
+                <Paperclip size={15} strokeWidth={2} />
+                <span><strong>Dukungan Konteks</strong> — Sertakan dokumen atau cuplikan kode langsung di percakapan.</span>
+              </div>
+              <div>
+                <Cpu size={15} strokeWidth={2} />
+                <span><strong>Penalaran Adaptif</strong> — Aktifkan mode Think saat butuh analisis lebih mendalam.</span>
+              </div>
+            </div>
+            <a href="#pilih-mode" className="workflow-cta">Mulai dari pilih mode <ArrowUpRight size={15} strokeWidth={2} /></a>
           </div>
           <div className="workflow-steps">
             {[
-              ['01', 'Pilih fokusmu', 'Buka mode diskusi, akademik, atau coding sesuai pekerjaanmu.'],
-              ['02', 'Berikan konteks', 'Tulis pertanyaan atau sertakan dokumen untuk memperjelas kebutuhan.'],
-              ['03', 'Olah lebih lanjut', 'Tinjau jawaban, ajukan pertanyaan lanjutan, dan verifikasi hal penting.'],
-            ].map(([number, title, description]) => (
-              <div key={number}>
+              ['01', 'TAHAP 01 · FOKUS', 'Pilih fokusmu', 'Buka mode diskusi, akademik, atau coding sesuai pekerjaanmu.', 'Smart Companion · Academic Writer · Coding Expert'],
+              ['02', 'TAHAP 02 · KONTEKS', 'Berikan konteks', 'Tulis pertanyaan atau sertakan dokumen untuk memperjelas kebutuhan.', 'Pertanyaan langsung · Lampiran file · Cuplikan kode'],
+              ['03', 'TAHAP 03 · EKSPLORASI', 'Olah lebih lanjut', 'Tinjau jawaban, ajukan pertanyaan lanjutan, dan verifikasi hal penting.', 'Mode Think · Edit pesan · Riwayat tersimpan'],
+            ].map(([number, badge, title, description, detail]) => (
+              <div key={number} className="workflow-step">
                 <span>{number}</span>
                 <div>
-                  <h3>{title}</h3>
+                  <div className="workflow-step-head">
+                    <h3>{title}</h3>
+                    <small>{badge}</small>
+                  </div>
                   <p>{description}</p>
+                  <div className="workflow-step-meta">{detail}</div>
                 </div>
               </div>
             ))}
@@ -135,24 +153,41 @@ export default function Landing({ onSelectPersona }: { onSelectPersona: (persona
       <section className="community">
         <div className="site-container">
           <div className="community-layout">
-            <div>
+            <div className="community-copy">
               <div className="eyebrow"><span />Teknologi bertemu komunitas</div>
               <h2>Tumbuh bersama<br />keluarga AET PCR.</h2>
               <p>Di balik setiap inovasi, ada orang-orang yang saling terhubung. Kenali Himpunan Mahasiswa AET Politeknik Caltex Riau melalui cerita, kegiatan, dan saluran resmi kami.</p>
               <div className="community-links">
-                {officialLinks.map(([href, title, caption]) => (
-                  <a href={href} target="_blank" rel="noopener noreferrer" key={href}>
-                    <span>{title} <small>/ {caption}</small></span>
-                    <ArrowUpRight size={16} strokeWidth={2} />
+                {officialLinks.map(([href, title, caption, tag]) => (
+                  <a href={href} target="_blank" rel="noopener noreferrer" key={href} className="community-link-card">
+                    <div className="community-link-top">
+                      <span className="community-link-tag">{tag}</span>
+                      <span className="community-link-arrow" aria-hidden="true"><ArrowUpRight size={15} strokeWidth={2.1} /></span>
+                    </div>
+                    <strong>{title}</strong>
+                    <small>{caption}</small>
                   </a>
                 ))}
               </div>
-              <a href="/AETPCR.docx" className="text-link" download>Dokumen AET PCR <ArrowDown size={15} strokeWidth={2} /></a>
+              <div className="community-actions">
+                <a href="/AETPCR.docx" className="community-doc-link" download>
+                  <FileText size={15} strokeWidth={2} />
+                  <span>Dokumen AET PCR</span>
+                  <ArrowDown size={14} strokeWidth={2} />
+                </a>
+                <Link href="/events/" className="community-events-link">
+                  Lihat agenda kegiatan <ArrowRight size={14} strokeWidth={2} />
+                </Link>
+              </div>
             </div>
             <div className="community-map">
+              <div className="map-topbar">
+                <span className="map-status"><i aria-hidden="true" />KAMPUS &amp; SEKRETARIAT</span>
+                <span className="map-coords">PEKANBARU · RIAU</span>
+              </div>
               <iframe title="Lokasi Politeknik Caltex Riau" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3989.6202092674093!2d101.42609689999999!3d0.5709752!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x31d5ab67086f2e89%3A0x65a24264fec306bb!2sPoliteknik%20Caltex%20Riau!5e0!3m2!1sid!2sid!4v1766210002355!5m2!1sid!2sid" loading="lazy" referrerPolicy="no-referrer" allowFullScreen />
               <div className="map-caption">
-                <MapPin size={20} strokeWidth={1.9} />
+                <div className="map-pin-badge" aria-hidden="true"><MapPin size={19} strokeWidth={1.9} /></div>
                 <div>
                   <strong>Politeknik Caltex Riau</strong>
                   <small>Pekanbaru, Riau · Indonesia</small>
@@ -165,11 +200,15 @@ export default function Landing({ onSelectPersona }: { onSelectPersona: (persona
           </div>
 
           <div className="final-cta">
-            <div>
+            <div className="final-cta-copy">
+              <div className="final-cta-eyebrow"><span />MULAI EKSPLORASI</div>
               <h2>Ide berikutnya dimulai dari kamu.</h2>
               <p>Ambil langkah pertama. Buka percakapan dan lihat ke mana idemu berkembang.</p>
             </div>
-            <a href="#pilih-mode" className="button button-white">Jelajahi mode AI <ArrowDown size={16} strokeWidth={2} /></a>
+            <div className="final-cta-actions">
+              <a href="#pilih-mode" className="button button-white">Jelajahi mode AI <ArrowUpRight size={16} strokeWidth={2} /></a>
+              <Link href="/news/" className="button final-cta-secondary">Baca cerita AET <ArrowRight size={15} strokeWidth={2} /></Link>
+            </div>
           </div>
         </div>
       </section>
