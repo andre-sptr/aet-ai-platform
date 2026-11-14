@@ -477,3 +477,88 @@
   /* Conversation history remains available from the mobile navigation drawer. */
   .chat-topbar-actions .chat-icon:nth-child(3) { display:none; }
 }
+
+/* Aurora UI Workspace Theme */
+.chat-workspace {
+  background: linear-gradient(135deg, #f3f8ff 0%, #ecf4ff 50%, #f1f9fc 100%);
+}
+.chat-main {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(ellipse 75% 50% at 82% 12%, rgba(56, 189, 248, 0.14), transparent 62%),
+    radial-gradient(ellipse 65% 50% at 16% 88%, rgba(0, 86, 210, 0.12), transparent 64%),
+    radial-gradient(ellipse 60% 45% at 50% 45%, rgba(20, 184, 166, 0.08), transparent 66%),
+    linear-gradient(180deg, #fafcff 0%, #f0f6ff 100%);
+}
+.chat-main > :not(.ambient-bg) {
+  position: relative;
+  z-index: 1;
+}
+.chat-main .ambient-orb {
+  opacity: 0.78;
+  filter: blur(60px);
+}
+.persona-daily .chat-main .ambient-orb.orb-1 {
+  background: linear-gradient(110deg, rgba(124, 85, 214, 0.22) 0%, rgba(0, 86, 210, 0.22) 48%, rgba(56, 189, 248, 0.22) 100%);
+}
+.persona-report .chat-main .ambient-orb.orb-1 {
+  background: linear-gradient(110deg, rgba(15, 118, 110, 0.2) 0%, rgba(20, 184, 166, 0.22) 45%, rgba(0, 86, 210, 0.22) 100%);
+}
+.chat-sidebar {
+  background: linear-gradient(180deg, rgba(247, 250, 255, 0.86) 0%, rgba(238, 245, 255, 0.88) 100%);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
+  border-right-color: rgba(147, 197, 253, 0.42);
+}
+.chat-sidebar.is-mobile-open {
+  background: rgba(248, 251, 255, 0.96);
+}
+.chat-new {
+  background: rgba(255, 255, 255, 0.88);
+  border-color: rgba(147, 197, 253, 0.52);
+  box-shadow: inset 0 1px 0 #fff, 0 6px 16px -8px rgba(0, 86, 210, 0.14);
+}
+.chat-persona {
+  background: linear-gradient(135deg, rgba(235, 243, 255, 0.92) 0%, rgba(224, 242, 254, 0.8) 100%);
+  border-color: rgba(147, 197, 253, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 20px -10px rgba(0, 86, 210, 0.15);
+}
+.chat-topbar {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom-color: transparent;
+}
+.chat-start-mark {
+  background: linear-gradient(135deg, rgba(235, 243, 255, 0.95), rgba(224, 242, 254, 0.9));
+  border-color: rgba(147, 197, 253, 0.65);
+  box-shadow: inset 0 1px 0 #fff, 0 10px 24px -8px rgba(0, 86, 210, 0.2);
+}
+.chat-prompts button {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(147, 197, 253, 0.5);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 10px 26px -14px rgba(0, 86, 210, 0.14);
+}
+.chat-prompts button:hover {
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(0, 86, 210, 0.42);
+  box-shadow: inset 0 1px 0 #fff, 0 14px 30px -12px rgba(0, 86, 210, 0.22);
+}
+.chat-message-user .chat-message-body {
+  background: linear-gradient(135deg, rgba(239, 246, 255, 0.92) 0%, rgba(240, 249, 255, 0.88) 100%);
+  border-color: rgba(147, 197, 253, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.92), 0 8px 20px -12px rgba(0, 86, 210, 0.12);
+}
+.chat-composer-area {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-top-color: transparent;
+}
+.chat-composer {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(147, 197, 253, 0.6);
+  box-shadow: inset 0 1px 0 #ffffff, 0 12px 32px -12px rgba(0, 86, 210, 0.15);
+}
