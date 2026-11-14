@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, ArrowUpRight, Camera, Check, Code2, Copy, FileText, History, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCcw, Search, Send, Sparkles, Square, ThumbsDown, ThumbsUp, Trash2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Camera, Check, Code2, Copy, FileText, History, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCcw, Search, Send, Sparkles, Square, ThumbsDown, ThumbsUp, Trash2, UserRound, X } from "lucide-react";
 import { api, API_BASE } from "../../lib/api";
 import { readChatStream } from "../../lib/chat-stream";
 import { prepareImage } from "../../lib/chat-attachments";
@@ -13,10 +13,36 @@ import ChatDialog from "./ChatDialog";
 import RichContent, { SourceReferences } from "./RichContent";
 
 const personas = {
-  daily: { title: "Smart Companion", subtitle: "Think & explore", heading: "Apa yang ingin kamu eksplorasi?", icon: MessageCircle, greeting: "Halo! 👋 Saya AET AI — teman cerdasmu di AET PCR. Mau tanya apa hari ini?", prompts: ["Bantu susun rencana belajar minggu ini", "Jelaskan konsep yang sedang saya pelajari", "Mari diskusikan ide proyek saya"] },
-  report: { title: "Academic Writer", subtitle: "Research & write", heading: "Tulisan yang kuat dimulai dari ide.", icon: FileText, greeting: "Halo! 📝 Saya AET AI, siap membantu penulisan akademik Anda — dari struktur laporan hingga analisis data. Silakan mulai.", prompts: ["Bantu buat kerangka laporan praktikum", "Perbaiki struktur paragraf akademik ini", "Jelaskan cara menganalisis hasil percobaan"] },
-  coding: { title: "Coding Expert", subtitle: "Build & understand", heading: "Mari bangun sesuatu yang bekerja.", icon: Code2, greeting: "Halo! 💻 Saya AET AI — siap bantu coding, debugging, dan penjelasan konsep teknis. Tempel kode atau tanya apa saja!", prompts: ["Bantu temukan masalah dalam kode saya", "Jelaskan konsep pemrograman ini", "Bantu rancang struktur proyek saya"] },
+  daily: {
+    modeCode: "01 / SMART COMPANION",
+    title: "Smart Companion",
+    shortTitle: "Companion",
+    subtitle: "Think & explore",
+    headingPrefix: "Apa yang ingin kamu ",
+    headingAccent: "eksplorasi?",
+    icon: MessageCircle,
+  },
+  report: {
+    modeCode: "02 / ACADEMIC WRITER",
+    title: "Academic Writer",
+    shortTitle: "Academic",
+    subtitle: "Research & write",
+    headingPrefix: "Tulisan yang kuat dimulai dari ",
+    headingAccent: "ide.",
+    icon: FileText,
+  },
+  coding: {
+    modeCode: "03 / CODING EXPERT",
+    title: "Coding Expert",
+    shortTitle: "Coding",
+    subtitle: "Build & understand",
+    headingPrefix: "Mari bangun sesuatu yang ",
+    headingAccent: "bekerja.",
+    icon: Code2,
+  },
 } as const;
+
+const personaOrder = ["daily", "report", "coding"] as const;
 
 const accepted = "image/png,image/jpeg,image/webp,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain";
 const errorMessage = (error: unknown) => error instanceof Error ? error.message : "Permintaan tidak berhasil. Silakan coba kembali.";
@@ -71,9 +97,10 @@ function Message({ message, onEdit, streamingStatus }: { message: LocalMessage; 
 }
 
 export default function ChatWorkspace({ initialPersona, onBack }: { initialPersona: Persona; onBack: () => void }) {
-  const config = personas[initialPersona];
+  const [activePersona, setActivePersona] = useState<Persona>(initialPersona);
+  const config = personas[activePersona];
   const Icon = config.icon;
-  const [store, setStore] = useState<ConversationStore>(() => emptyStore(initialPersona));
+  const [store, setStore] = useState<ConversationStore>(() => emptyStore(activePersona));
   const storeRef = useRef(store);
   const saveAllowed = useRef(false);
   const [loaded, setLoaded] = useState(false);
@@ -102,27 +129,28 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   const scrollRef = useRef<HTMLDivElement>(null);
   const shouldAutoScroll = useRef(true);
   const active = store.conversations.find(item => item.id === store.activeId) || store.conversations[0];
+  const isEmptyChat = active.messages.length === 0;
   const latestMessage = active.messages[active.messages.length - 1];
   const latestContentLength = latestMessage?.content.length || 0;
 
   const commit = useCallback((next: ConversationStore, write = true) => {
     storeRef.current = next; setStore(next);
     if (write && saveAllowed.current) {
-      try { persistStore(localStorage, initialPersona, next); }
+      try { persistStore(localStorage, activePersona, next); }
       catch { setStorageError("Riwayat tidak dapat disimpan. Percakapan tetap tersedia selama halaman ini terbuka."); }
     }
-  }, [initialPersona]);
+  }, [activePersona]);
 
   useEffect(() => {
     let mounted = true;
     queueMicrotask(() => {
       if (!mounted) return;
-      try { const saved = loadStore(localStorage, initialPersona); saveAllowed.current = true; commit(saved, false); }
+      try { const saved = loadStore(localStorage, activePersona); saveAllowed.current = true; commit(saved, false); }
       catch (failure) { saveAllowed.current = false; setStorageError(errorMessage(failure)); }
       setLoaded(true);
     });
     return () => { mounted = false; request.current?.abort(); uploadRequest.current?.abort(); };
-  }, [commit, initialPersona]);
+  }, [commit, activePersona]);
 
   useEffect(() => {
     if (!shouldAutoScroll.current) return;
@@ -167,7 +195,7 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
     try {
       const context = modelMessages(history);
       if (!context.length) throw new Error("Lampiran atau konteks terlalu panjang. Kurangi jumlah dokumen lalu coba kembali.");
-      const response = await fetch(`${API_BASE}/v1/chat`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "text/event-stream" }, body: JSON.stringify({ persona: initialPersona, effort, messages: context }), signal: controller.signal });
+      const response = await fetch(`${API_BASE}/v1/chat`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json", Accept: "text/event-stream" }, body: JSON.stringify({ persona: activePersona, effort, messages: context }), signal: controller.signal });
       if (!response.ok) {
         const payload = await response.json().catch(() => ({}));
         const detail = payload.error && typeof payload.error === "object" ? payload.error : payload;
@@ -227,8 +255,17 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   }
   function createConversation() {
     if (busy) return;
-    const item = newConversation(initialPersona);
+    const item = newConversation(activePersona);
     commit(updateConversation(storeRef.current, item)); setInput(""); setAttachments([]); setError(""); setEditId(null); setHistoryOpen(false); setMobileSidebarOpen(false); inputRef.current?.focus();
+  }
+  function switchPersona(nextPersona: Persona) {
+    if (busy || nextPersona === activePersona) return;
+    request.current?.abort(); uploadRequest.current?.abort();
+    const fresh = emptyStore(nextPersona);
+    storeRef.current = fresh; setStore(fresh);
+    setActivePersona(nextPersona);
+    setInput(""); setAttachments([]); setError(""); setEditId(null); setHistoryOpen(false); setMobileSidebarOpen(false);
+    inputRef.current?.focus();
   }
   function editMessage(message: LocalMessage) {
     setEditId(message.id); setInput(message.content); setAttachments(message.attachments?.filter(item => item.text || item.dataUrl) || []); inputRef.current?.focus();
@@ -246,38 +283,93 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   const selectConversation = (id: string) => {
     commit({ ...storeRef.current, activeId: id }); setError(""); setEditId(null); setInput(""); setAttachments([]); setMobileSidebarOpen(false);
   };
-  return <div className={`chat-workspace persona-${initialPersona}${sidebarCollapsed ? " sidebar-collapsed" : ""}${mobileSidebarOpen ? " mobile-sidebar-open" : ""}`}>
+  return <div className={`chat-workspace persona-${activePersona} ui-editorial sb-modular sbg-mist ${isEmptyChat ? "is-empty-chat" : "is-active-chat"}${sidebarCollapsed ? " sidebar-collapsed" : ""}${mobileSidebarOpen ? " mobile-sidebar-open" : ""}`}>
     <a href="#chat-main" className="chat-skip">Lewati ke percakapan</a>
     {mobileSidebarOpen && <button type="button" className="chat-mobile-scrim" aria-label="Tutup navigasi" onClick={() => setMobileSidebarOpen(false)} />}
     <aside className={`chat-sidebar${mobileSidebarOpen ? " is-mobile-open" : ""}`} aria-label="Navigasi percakapan" {...(mobileSidebarOpen ? { role: "dialog", "aria-modal": true } : {})}>
       <div className="chat-sidebar-brand-row">
-        <button type="button" className="chat-brand" onClick={stopAndLeave} aria-label="AET AI — kembali ke beranda">AET<span>AI</span><small>YOUR THINKING PARTNER</small></button>
+        <button type="button" className="chat-brand" onClick={stopAndLeave} aria-label="AET AI — kembali ke beranda">
+          <span className="chat-brand-word">AET <span>AI</span><i aria-hidden="true" /></span>
+          <small>YOUR THINKING PARTNER</small>
+        </button>
         <button type="button" className="chat-icon chat-sidebar-collapse" aria-label={sidebarCollapsed ? "Perluas sidebar" : "Ciutkan sidebar"} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
         <button type="button" className="chat-icon chat-sidebar-mobile-close" aria-label="Tutup navigasi" onClick={() => setMobileSidebarOpen(false)}><X size={18} /></button>
       </div>
-      <button type="button" className="chat-new" onClick={createConversation} disabled={busy || !loaded}><Plus size={17} /><span>Percakapan baru</span></button>
-      <div className="chat-sidebar-label">WORKSPACE AKTIF</div>
-      <div className="chat-persona"><span className="chat-persona-icon"><Icon size={18} /></span><div><strong>{config.title}</strong><small>{config.subtitle}</small></div></div>
+      <button type="button" className="chat-new" onClick={createConversation} disabled={busy || !loaded}>
+        <span className="chat-new-icon" aria-hidden="true"><Plus size={16} strokeWidth={2.2} /></span>
+        <span>Percakapan baru</span>
+      </button>
+      <div className="chat-sidebar-label">MODE WORKSPACE</div>
+      <div className="chat-mode-switcher" role="group" aria-label="Ganti mode AI">
+        {personaOrder.map(key => {
+          const item = personas[key];
+          const ModeIcon = item.icon;
+          const isCurrent = activePersona === key;
+          return (
+            <button
+              type="button"
+              key={key}
+              className={`chat-persona-option mode-${key}${isCurrent ? " is-active" : ""}`}
+              aria-label={`Pilih mode ${item.title}`}
+              aria-pressed={isCurrent}
+              disabled={busy}
+              onClick={() => switchPersona(key)}
+              title={`${item.title} — ${item.subtitle}`}
+            >
+              <span className="chat-persona-icon" aria-hidden="true"><ModeIcon size={16} /></span>
+              <span className="chat-persona-copy">
+                <strong>{item.title}</strong>
+                <small>{item.subtitle}</small>
+                <span className="chat-persona-short" aria-hidden="true">{item.shortTitle}</span>
+              </span>
+              <span className="chat-persona-dot" aria-hidden="true" />
+            </button>
+          );
+        })}
+      </div>
       <div className="chat-sidebar-label chat-history-label">RIWAYAT PERCAKAPAN</div>
       <label className="chat-history-search-wrap"><Search size={15} /><input aria-label="Cari riwayat percakapan" className="chat-history-search" placeholder="Cari percakapan…" value={search} onChange={event => setSearch(event.target.value)} /></label>
       <div className="chat-sidebar-history">{historyGroups.length ? historyGroups.map(group => <section className="chat-history-group" key={group.label}><h2>{group.label}</h2>{group.items.map(item => <button type="button" key={item.id} disabled={busy} aria-current={item.id === active.id ? "true" : undefined} onClick={() => selectConversation(item.id)} title={item.title}><span className="chat-history-dot" />{item.title}</button>)}</section>) : <p className="chat-history-empty">{search ? "Tidak ada percakapan yang cocok." : "Percakapan baru akan muncul di sini."}</p>}</div>
-      <div className="chat-sidebar-footer"><nav aria-label="Tautan AET"><Link href="/">Beranda</Link><Link href="/news/">Berita AET</Link></nav><p><span className="chat-local-indicator" /> Riwayat tersimpan lokal di perangkat ini.</p></div>
+      <div className="chat-sidebar-footer"><nav aria-label="Tautan AET"><Link href="/">Beranda</Link><Link href="/news/">Berita</Link><Link href="/events/">Kegiatan</Link></nav><p><span className="chat-local-indicator" /> Riwayat tersimpan lokal di perangkat ini.</p></div>
     </aside>
     <main id="chat-main" className="chat-main">
       <AuroraBackdrop />
-      <header className="chat-topbar"><div className="chat-topbar-title"><button type="button" className="chat-icon chat-mobile-menu" aria-label="Buka navigasi" onClick={() => setMobileSidebarOpen(true)}><Menu size={19} /></button><button type="button" className="chat-icon chat-back-home" aria-label="Kembali ke beranda" onClick={stopAndLeave}><ArrowLeft size={19} /></button><span className="chat-persona-mark"><Icon size={17} /></span><div><h1>{config.title}</h1><p><span className="chat-topbar-dot" /> AET AI <span className="chat-topbar-separator">·</span> Adaptif untuk kebutuhanmu</p></div></div><div className="chat-topbar-actions"><button type="button" className="chat-icon chat-desktop-collapse" aria-label={sidebarCollapsed ? "Perluas sidebar" : "Ciutkan sidebar"} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button><button type="button" className="chat-icon" aria-label="Percakapan baru" onClick={createConversation} disabled={busy || !loaded}><Plus size={18} /></button><button type="button" className="chat-icon" aria-label="Buka riwayat" onClick={() => setHistoryOpen(true)} disabled={!loaded}><History size={18} /></button><button type="button" className="chat-icon" aria-label="Ganti nama percakapan" onClick={() => { setRename(active.title); setRenameOpen(true); }} disabled={busy || !loaded}><Pencil size={16} /></button><button type="button" className="chat-icon chat-danger" aria-label="Hapus percakapan" onClick={() => setDeleteId(active.id)} disabled={busy || !loaded}><Trash2 size={17} /></button></div></header>
+      <header className="chat-topbar">
+        <div className="chat-topbar-title">
+          <button type="button" className="chat-icon chat-mobile-menu" aria-label="Buka navigasi" onClick={() => setMobileSidebarOpen(true)}><Menu size={19} /></button>
+          <button type="button" className="chat-icon chat-back-home" aria-label="Kembali ke beranda" onClick={stopAndLeave}><ArrowLeft size={19} /></button>
+          <span className="chat-persona-mark"><Icon size={17} /></span>
+          <div>
+            <h1>{config.title}</h1>
+            <p><span className="chat-topbar-dot" /> AET AI <span className="chat-topbar-separator">·</span> Adaptif untuk kebutuhanmu</p>
+          </div>
+        </div>
+        <div className="chat-topbar-actions">
+          <button type="button" className="chat-icon chat-desktop-collapse" aria-label={sidebarCollapsed ? "Perluas sidebar" : "Ciutkan sidebar"} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
+          <button type="button" className="chat-icon" aria-label="Percakapan baru" onClick={createConversation} disabled={busy || !loaded}><Plus size={18} /></button>
+          <button type="button" className="chat-icon" aria-label="Buka riwayat" onClick={() => setHistoryOpen(true)} disabled={!loaded}><History size={18} /></button>
+          <button type="button" className="chat-icon" aria-label="Ganti nama percakapan" onClick={() => { setRename(active.title); setRenameOpen(true); }} disabled={busy || !loaded}><Pencil size={16} /></button>
+          <button type="button" className="chat-icon chat-danger" aria-label="Hapus percakapan" onClick={() => setDeleteId(active.id)} disabled={busy || !loaded}><Trash2 size={17} /></button>
+        </div>
+      </header>
       <div ref={scrollRef} className="chat-scroll" aria-label="Percakapan" onScroll={event => { const element = event.currentTarget; shouldAutoScroll.current = element.scrollHeight - element.scrollTop - element.clientHeight < 120; }}><div className="chat-reading">
-        {!active.messages.length && <section className="chat-start"><div className="chat-start-mark"><Sparkles size={21} /></div><h2>{config.heading}</h2><p>Berikan konteks dan kembangkan pemikiranmu bersama AET AI.</p><div className="chat-prompts">{config.prompts.map(prompt => <button type="button" key={prompt} onClick={() => { setInput(prompt); inputRef.current?.focus(); }}>{prompt}<ArrowUpRight size={14} /></button>)}</div><div className="chat-greeting"><span className="chat-greeting-mark"><Icon size={17} /></span><p>{config.greeting}</p></div></section>}
+        {isEmptyChat && (
+          <section className="chat-start">
+            <div className="chat-start-head">
+              <div className="chat-eyebrow-pill"><span className="chat-eyebrow-dot" aria-hidden="true" />{config.modeCode}</div>
+            </div>
+            <h2>{config.headingPrefix}<em>{config.headingAccent}</em></h2>
+          </section>
+        )}
         {active.messages.map(message => <Message key={message.id} message={message} streamingStatus={message.state === "streaming" ? status : undefined} onEdit={message.role === "user" && !busy ? () => editMessage(message) : undefined} />)}
       </div></div>
       <div className="chat-composer-area"><div className="chat-composer-inner">
-        {!active.messages.length && <p className="chat-composer-hint">Mulai dengan pertanyaan atau lampirkan dokumen untuk dibahas.</p>}
         {error && <div className="chat-feedback chat-feedback-error" role="alert">{error}{active.messages.some(message => message.role === "user") && <button type="button" onClick={() => void generate(retryMessages(active.messages))} disabled={busy}><RotateCcw size={13} /> Coba ulang</button>}</div>}
         {storageError && <p className="chat-feedback chat-feedback-error" role="alert">{storageError}</p>}
         {editId && <div className="chat-feedback">Mengedit pesan. Jawaban setelah pesan ini akan diganti.<button type="button" onClick={() => { setEditId(null); setInput(""); setAttachments([]); }}>Batal edit</button></div>}
         {attachments.length > 0 && <div className="chat-pending-attachments">{attachments.map(item => <div key={item.id}><button type="button" className="chat-attachment-name" onClick={() => item.dataUrl ? setViewAttachment(item) : undefined}>{item.dataUrl ? <Image src={item.dataUrl} alt="" width={38} height={38} unoptimized /> : <FileText size={20} />}<span>{item.name}</span></button><button type="button" className="chat-icon" aria-label={`Hapus lampiran ${item.name}`} onClick={() => setAttachments(items => items.filter(attachment => attachment.id !== item.id))}><X size={15} /></button></div>)}</div>}
         <form onSubmit={submit} className="chat-composer"><label htmlFor="aet-chat-input" className="sr-only">Pesan untuk {config.title}</label><textarea id="aet-chat-input" ref={inputRef} placeholder={`Kirim pesan ke ${config.title}…`} value={input} maxLength={20_000} rows={2} disabled={busy || !loaded} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
-          <div className="chat-composer-toolbar"><div className="chat-composer-tools"><button type="button" className="chat-icon" aria-label="Lampirkan dokumen atau gambar" disabled={busy || uploading || !loaded} onClick={() => fileRef.current?.click()}>{uploading ? <LoaderCircle size={18} className="chat-spin" /> : <Paperclip size={18} />}</button><button type="button" className="chat-icon" aria-label="Ambil gambar dari kamera" disabled={busy || uploading || !loaded} onClick={() => cameraRef.current?.click()}><Camera size={18} /></button><span>Shift + Enter untuk baris baru</span></div>
+          <div className="chat-composer-toolbar"><div className="chat-composer-tools"><button type="button" className="chat-icon" aria-label="Lampirkan dokumen atau gambar" disabled={busy || uploading || !loaded} onClick={() => fileRef.current?.click()}>{uploading ? <LoaderCircle size={18} className="chat-spin" /> : <Paperclip size={18} />}</button><button type="button" className="chat-icon" aria-label="Ambil gambar dari kamera" disabled={busy || uploading || !loaded} onClick={() => cameraRef.current?.click()}><Camera size={18} /></button><span className="chat-key-hint" aria-hidden="true"><kbd>Enter</kbd> kirim · <kbd>Shift+Enter</kbd> baris baru</span></div>
             <div className="chat-composer-controls"><fieldset className="chat-effort" disabled={busy}><legend className="sr-only">Mode respons</legend>{([['fast', 'Fast', 'Cepat'], ['normal', 'Normal', 'Seimbang'], ['think', 'Think', 'Analisis mendalam']] as const).map(([value, label, description]) => <label key={value} className={effort === value ? "selected" : ""} title={description}><input type="radio" name="chat-effort" value={value} checked={effort === value} onChange={() => setEffort(value)} /><span>{label}</span></label>)}</fieldset><button type={busy ? "button" : "submit"} className={`chat-send${busy ? " is-stop" : ""}`} aria-label={busy ? "Hentikan jawaban" : "Kirim pesan"} title={busy ? "Hentikan jawaban" : "Kirim pesan"} disabled={!busy && (uploading || !loaded || !input.trim() && !attachments.length)} onClick={busy ? () => request.current?.abort() : undefined}>{busy ? <Square size={14} fill="currentColor" /> : <Send size={17} />}</button></div>
           </div>
         </form>
@@ -288,7 +380,7 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
     </main>
     {historyOpen && <ChatDialog title="Percakapan tersimpan" onClose={() => setHistoryOpen(false)}><p className="chat-dialog-note">Riwayat per mode tersimpan di browser ini.</p><button type="button" className="chat-new" disabled={busy} onClick={createConversation}><Plus size={16} /> Percakapan baru</button><input className="chat-history-search" aria-label="Cari percakapan tersimpan" placeholder="Cari percakapan…" value={search} onChange={event => setSearch(event.target.value)} /><div className="chat-dialog-history">{history.map(item => <div key={item.id}><button type="button" disabled={busy} aria-current={item.id === active.id ? "true" : undefined} onClick={() => { selectConversation(item.id); setHistoryOpen(false); }}>{item.title}</button><button type="button" className="chat-icon chat-danger" disabled={busy} aria-label={`Hapus ${item.title}`} onClick={() => { setHistoryOpen(false); setDeleteId(item.id); }}><Trash2 size={16} /></button></div>)}</div></ChatDialog>}
     {renameOpen && <ChatDialog title="Ganti nama percakapan" onClose={() => setRenameOpen(false)}><form onSubmit={event => { event.preventDefault(); if (!rename.trim()) return; const current = storeRef.current.conversations.find(item => item.id === storeRef.current.activeId)!; commit(updateConversation(storeRef.current, { ...current, title: rename.trim().slice(0, 100) })); setRenameOpen(false); }}><label className="chat-field">Nama percakapan<input value={rename} maxLength={100} required onChange={event => setRename(event.target.value)} /></label><div className="chat-dialog-actions"><button type="button" onClick={() => setRenameOpen(false)}>Batal</button><button type="submit" className="chat-primary">Simpan nama</button></div></form></ChatDialog>}
-    {deleteId && <ChatDialog title="Hapus percakapan ini?" onClose={() => setDeleteId(null)}><p>Percakapan <strong>{store.conversations.find(item => item.id === deleteId)?.title}</strong> akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan.</p><div className="chat-dialog-actions"><button type="button" onClick={() => setDeleteId(null)}>Batal</button><button type="button" className="chat-delete" onClick={() => { commit(deleteConversation(storeRef.current, deleteId, initialPersona)); setDeleteId(null); setError(""); setInput(""); setAttachments([]); setEditId(null); }}>Hapus percakapan</button></div></ChatDialog>}
+    {deleteId && <ChatDialog title="Hapus percakapan ini?" onClose={() => setDeleteId(null)}><p>Percakapan <strong>{store.conversations.find(item => item.id === deleteId)?.title}</strong> akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan.</p><div className="chat-dialog-actions"><button type="button" onClick={() => setDeleteId(null)}>Batal</button><button type="button" className="chat-delete" onClick={() => { commit(deleteConversation(storeRef.current, deleteId, activePersona)); setDeleteId(null); setError(""); setInput(""); setAttachments([]); setEditId(null); }}>Hapus percakapan</button></div></ChatDialog>}
     {viewAttachment?.dataUrl && <ChatDialog title={viewAttachment.name} onClose={() => setViewAttachment(null)}><Image src={viewAttachment.dataUrl} width={1400} height={1000} unoptimized alt={viewAttachment.name} style={{ width: "100%", height: "auto" }} /></ChatDialog>}
   </div>;
 }
