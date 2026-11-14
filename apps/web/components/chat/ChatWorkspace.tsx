@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, Camera, Check, Code2, Copy, FileText, History, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCcw, Search, Send, Sparkles, Square, ThumbsDown, ThumbsUp, Trash2, UserRound, X } from "lucide-react";
+import { ArrowLeft, Camera, Check, Code2, Copy, FileText, History, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCcw, Search, Send, Square, ThumbsDown, ThumbsUp, Trash2, UserRound, X } from "lucide-react";
 import { api, API_BASE } from "../../lib/api";
 import { readChatStream } from "../../lib/chat-stream";
 import { prepareImage } from "../../lib/chat-attachments";
@@ -61,7 +61,8 @@ async function copyText(value: string): Promise<boolean> {
   } catch { return false; }
 }
 
-function Message({ message, onEdit, streamingStatus }: { message: LocalMessage; onEdit?: () => void; streamingStatus?: string }) {
+function Message({ message, persona, onEdit, streamingStatus }: { message: LocalMessage; persona: Persona; onEdit?: () => void; streamingStatus?: string }) {
+  const AssistantIcon = personas[persona].icon;
   const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
   const [vote, setVote] = useState<"up" | "down" | null>(null);
   const [expandedImage, setExpandedImage] = useState<Attachment | null>(null);
@@ -73,7 +74,7 @@ function Message({ message, onEdit, streamingStatus }: { message: LocalMessage; 
   async function copyMessage() { setCopyState(await copyText(message.content) ? "copied" : "failed"); }
   const streaming = message.state === "streaming";
   return <article className={`chat-message chat-message-${message.role}${streaming ? " is-streaming" : ""}`} aria-label={message.role === "user" ? "Pesan Anda" : "Jawaban AET AI"}>
-    <div className={`chat-message-avatar ${message.role === "assistant" ? "is-assistant" : "is-user"}`} aria-hidden="true">{message.role === "user" ? <UserRound size={16} /> : <Sparkles size={16} />}</div>
+    <div className={`chat-message-avatar ${message.role === "assistant" ? "is-assistant" : "is-user"}`} aria-hidden="true">{message.role === "user" ? <UserRound size={16} /> : <AssistantIcon size={16} />}</div>
     <div className="chat-message-body"><div className="chat-message-author">{message.role === "user" ? "Kamu" : "AET AI"}{streaming && <span className="chat-streaming-badge"><i /> Sedang menjawab</span>}</div>
       {message.attachments?.map(item => <div className="chat-message-attachment" key={item.id}>
         {item.dataUrl && /^data:image\/(png|jpeg|webp);base64,/.test(item.dataUrl) ? <button type="button" className="chat-content-image" aria-label={`Perbesar lampiran ${item.name}`} onClick={() => setExpandedImage(item)}><Image src={item.dataUrl} width={320} height={200} unoptimized alt={item.name} style={{ maxWidth: "100%", height: "auto" }} /></button> : <><FileText size={16} /><span>{item.name}</span>{item.mimeType.startsWith("image/") && <small>Pratinjau tidak disimpan di riwayat</small>}</>}
@@ -361,7 +362,7 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
             <h2>{config.headingPrefix}<em>{config.headingAccent}</em></h2>
           </section>
         )}
-        {active.messages.map(message => <Message key={message.id} message={message} streamingStatus={message.state === "streaming" ? status : undefined} onEdit={message.role === "user" && !busy ? () => editMessage(message) : undefined} />)}
+        {active.messages.map(message => <Message key={message.id} message={message} persona={activePersona} streamingStatus={message.state === "streaming" ? status : undefined} onEdit={message.role === "user" && !busy ? () => editMessage(message) : undefined} />)}
       </div></div>
       <div className="chat-composer-area"><div className="chat-composer-inner">
         {error && <div className="chat-feedback chat-feedback-error" role="alert">{error}{active.messages.some(message => message.role === "user") && <button type="button" onClick={() => void generate(retryMessages(active.messages))} disabled={busy}><RotateCcw size={13} /> Coba ulang</button>}</div>}
