@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Calendar, Clock, MapPin, Share2 } from 'lucide-react';
 import type { News, Event as AetEvent } from '@aet/contracts';
 import { NewsSchema, EventSchema } from '@aet/contracts';
-import { api } from '../lib/api';
+import { ApiError, api } from '../lib/api';
 import PublicShell, { EmptyState } from './PublicShell';
 import SafeImage from './SafeImage';
 import RichContent from './chat/RichContent';
@@ -27,7 +27,7 @@ export default function PublicDetail({ kind, routeKey }: { kind: 'news' | 'event
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     const controller = new AbortController();
-    api<unknown>(`/v1/${kind}/${encodeURIComponent(routeKey)}`, { signal: controller.signal }).then(value => { const item = (kind === 'news' ? NewsSchema : EventSchema).parse(value); if (!item.published) throw new Error('Konten tidak dipublikasikan.'); if (!controller.signal.aborted) setRecord(item); }).catch(() => { if (!controller.signal.aborted) setError('Konten ini mungkin telah dihapus, belum dipublikasikan, atau layanan sedang tidak tersedia.'); });
+    api<unknown>(`/v1/${kind}/${encodeURIComponent(routeKey)}`, { signal: controller.signal }).then(value => { const item = (kind === 'news' ? NewsSchema : EventSchema).parse(value); if (!item.published) throw new Error('Konten tidak dipublikasikan.'); if (!controller.signal.aborted) setRecord(item); }).catch((err: unknown) => { if (!controller.signal.aborted) setError(err instanceof ApiError && (err.status === 0 || err.status >= 500) ? err.message : 'Konten ini mungkin telah dihapus, belum dipublikasikan, atau layanan sedang tidak tersedia.'); });
     return () => controller.abort();
   }, [kind, routeKey]);
   const isNews = kind === 'news';

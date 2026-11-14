@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ArrowUpRight, Calendar, Clock, MapPin, Newspaper, RefreshCw, Users } from 'lucide-react';
 import type { News, Event as AetEvent, TeamMember } from '@aet/contracts';
 import { NewsSchema, EventSchema, TeamMemberSchema } from '@aet/contracts';
-import { api } from '../lib/api';
+import { ApiError, api } from '../lib/api';
 import PublicShell, { EmptyState, PageIntro } from './PublicShell';
 import SafeImage from './SafeImage';
 
@@ -23,7 +23,7 @@ function useCollection<T>(path: string, schema: { parse: (value: unknown) => T[]
   const [revision, setRevision] = useState(0);
   useEffect(() => {
     const controller = new AbortController();
-    api<unknown>(path, { signal: controller.signal }).then(result => { const parsed = schema.parse(result); if (!controller.signal.aborted) { setData(parsed); setError(null); } }).catch(() => { if (!controller.signal.aborted) setError('Informasi belum dapat dimuat. Periksa koneksi lalu coba kembali.'); });
+    api<unknown>(path, { signal: controller.signal }).then(result => { const parsed = schema.parse(result); if (!controller.signal.aborted) { setData(parsed); setError(null); } }).catch((err: unknown) => { if (!controller.signal.aborted) setError(err instanceof ApiError ? err.message : 'Informasi belum dapat dimuat. Periksa koneksi lalu coba kembali.'); });
     return () => controller.abort();
   }, [path, revision, schema]);
   return { data, error, retry: () => { setError(null); setRevision(value => value + 1); } };
