@@ -40,7 +40,44 @@ export function PublicNavigation() {
 }
 
 export function PublicFooter() {
-  return <footer className="public-footer"><div className="site-container"><div className="footer-top"><div><Brand /><p>Ruang bertemu ide, teknologi,<br />dan komunitas AET PCR.</p></div><nav aria-label="Navigasi footer"><Link href="/news/">Berita</Link><Link href="/events/">Kegiatan</Link><Link href="/team/">Tim AET</Link><a href="https://tet.pcr.ac.id/" target="_blank" rel="noopener noreferrer">Program studi <ArrowUpRight size={14} /></a></nav></div><div className="footer-bottom"><p>© {new Date().getFullYear()} Association of Electronics Telecommunication</p><span>Politeknik Caltex Riau · Pekanbaru</span></div></div></footer>;
+  return (
+    <footer className="public-footer">
+      <div className="site-container">
+        <div className="footer-top">
+          <div className="footer-brand">
+            <Brand />
+            <p>Ruang bertemu ide, teknologi, dan komunitas mahasiswa Teknik Elektronika Telekomunikasi Politeknik Caltex Riau.</p>
+            <div className="footer-badge"><span aria-hidden="true" />Himpunan Mahasiswa AET · PCR</div>
+          </div>
+          <nav className="footer-nav" aria-label="Navigasi footer">
+            <div className="footer-col">
+              <span className="footer-col-title">Jelajahi</span>
+              <Link href="/">Beranda</Link>
+              <Link href="/news/">Berita</Link>
+              <Link href="/events/">Kegiatan</Link>
+              <Link href="/team/">Tim AET</Link>
+            </div>
+            <div className="footer-col">
+              <span className="footer-col-title">Komunitas &amp; AI</span>
+              <Link href="/#pilih-mode">AET AI Workspace</Link>
+              <a href="/AETPCR.docx" download>Dokumen AET PCR</a>
+              <a href="https://tet.pcr.ac.id/" target="_blank" rel="noopener noreferrer">Program studi <ArrowUpRight size={13} /></a>
+            </div>
+            <div className="footer-col">
+              <span className="footer-col-title">Saluran Resmi</span>
+              <a href="https://www.instagram.com/aetpcr/" target="_blank" rel="noopener noreferrer">Instagram <ArrowUpRight size={13} /></a>
+              <a href="https://www.youtube.com/@AETPCR" target="_blank" rel="noopener noreferrer">YouTube <ArrowUpRight size={13} /></a>
+              <a href="https://facebook.com/aetpcr/" target="_blank" rel="noopener noreferrer">Facebook <ArrowUpRight size={13} /></a>
+            </div>
+          </nav>
+        </div>
+        <div className="footer-bottom">
+          <p>© {new Date().getFullYear()} <span className="footer-org">Association of <em>Electro</em>nics Telecommunication</span></p>
+          <div className="footer-bottom-meta"><span>Politeknik Caltex Riau</span><i aria-hidden="true" /><span>Pekanbaru, Indonesia</span></div>
+        </div>
+      </div>
+    </footer>
+  );
 }
 
 export function AuroraBackdrop() {
