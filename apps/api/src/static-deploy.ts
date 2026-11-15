@@ -165,7 +165,15 @@ async function collectSourceTree(
 
 async function ensureDirectory(path: string): Promise<void> {
   const existing = await lstat(path).catch(() => null);
-  if (existing && !existing.isDirectory()) {
+  if (existing?.isDirectory()) {
+    const uid = process.getuid?.();
+    const canChmod = process.platform !== 'win32' && uid !== undefined && (uid === 0 || uid === existing.uid);
+    if (canChmod && (existing.mode & 0o755) !== 0o755) {
+      await chmod(path, 0o755);
+    }
+    return;
+  }
+  if (existing) {
     await rm(path, { recursive: true, force: true });
   }
   await mkdir(path, { recursive: true, mode: 0o755 });
