@@ -17,6 +17,7 @@ Object.defineProperty(dom.window.HTMLDialogElement.prototype, "close", { value()
 const { render, fireEvent, waitFor, cleanup } = await import("@testing-library/react");
 const { LoginForm } = await import("../components/admin/LoginForm");
 const { ModelTestPanel } = await import("../components/admin/ModelTestPanel");
+const { AiSettingsCard } = await import("../components/admin/AiSettingsCard");
 const { ContentManager } = await import("../components/admin/ContentManager");
 
 afterEach(() => { cleanup(); globalThis.fetch = previousFetch; dom.window.localStorage.clear(); });
@@ -91,7 +92,10 @@ test("manual model panel never sends a request before explicit reload or test an
   const cachedRaw = dom.window.localStorage.getItem("aet-ai:admin:sumopod-models:v1");
   assert.ok(cachedRaw);
   assert.deepEqual(JSON.parse(cachedRaw).models, ["operator/model-1", "gpt-4o-mini"]);
-  fireEvent.change(view.getByLabelText("Model ID"), { target: { value: "operator/model-1" } });
+  fireEvent.click(view.getByRole("button", { name: "Model ID" }));
+  fireEvent.change(view.getByLabelText("Cari ID model"), { target: { value: "operator" } });
+  assert.equal(view.queryByRole("option", { name: "gpt-4o-mini" }), null);
+  fireEvent.click(view.getByRole("option", { name: "operator/model-1" }));
   fireEvent.change(view.getByLabelText("Prompt singkat"), { target: { value: "Jelaskan satu konsep." } });
   assert.equal(requests.length, 1);
   fireEvent.submit(view.getByRole("form", { name: "Uji model AI" }));
@@ -99,6 +103,56 @@ test("manual model panel never sends a request before explicit reload or test an
   assert.equal(requests.length, 2);
   assert.match(requests[1].path, /\/v1\/admin\/ai\/model-test$/);
   assert.deepEqual(requests[1].body, { modelId: "operator/model-1", prompt: "Jelaskan satu konsep." });
+});
+
+test("AET AI settings card loads server configuration and saves updated models and pipeline toggles", async () => {
+  let savedPayload: unknown;
+  globalThis.fetch = async (input, options) => {
+    const path = String(input);
+    const method = options?.method ?? "GET";
+    if (path.endsWith("/v1/admin/ai/settings") && method === "GET") {
+      return Response.json({
+        isCustomized: false,
+        settings: {
+          effortModels: { fast: "gpt-4o-mini", normal: "gpt-4.1-mini", think: "gpt-5-mini" },
+          personaModels: { daily: null, report: null, coding: null },
+          visionModelId: "gpt-4o-mini",
+          classifierModelId: null,
+          features: {
+            routerV2: false,
+            semanticClassifier: false,
+            promptPreparation: false,
+            multiModelOrchestration: false,
+            qualityEvaluation: false,
+            visionEnabled: true,
+          },
+        },
+      });
+    }
+    savedPayload = JSON.parse(String(options?.body ?? "{}"));
+    return Response.json({ isCustomized: true, settings: savedPayload });
+  };
+  const view = render(<AiSettingsCard availableModels={["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-mini", "operator/coding-model"]} hasCachedModels />);
+  await waitFor(() => assert.ok(view.getByRole("form", { name: "Form pengaturan model AET AI" })));
+  fireEvent.click(view.getByRole("button", { name: "Coding Expert" }));
+  fireEvent.click(view.getByRole("option", { name: "operator/coding-model" }));
+  fireEvent.click(view.getByRole("switch", { name: "Hybrid Router v2" }));
+  fireEvent.click(view.getByRole("button", { name: "Simpan pengaturan" }));
+  await waitFor(() => assert.ok(view.getByText(/berhasil disimpan/i)));
+  assert.deepEqual(savedPayload, {
+    effortModels: { fast: "gpt-4o-mini", normal: "gpt-4.1-mini", think: "gpt-5-mini" },
+    personaModels: { daily: null, report: null, coding: "operator/coding-model" },
+    visionModelId: "gpt-4o-mini",
+    classifierModelId: null,
+    features: {
+      routerV2: true,
+      semanticClassifier: false,
+      promptPreparation: false,
+      multiModelOrchestration: false,
+      qualityEvaluation: false,
+      visionEnabled: true,
+    },
+  });
 });
 
 test("CMS news form creates a validated draft and refreshes its collection", async () => {

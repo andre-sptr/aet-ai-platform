@@ -54,6 +54,76 @@ test('raw attachment extraction returns validated text and rejects MIME spoofing
     assert.equal(spoofed.statusCode, 415);
   } finally { await app.close(); }
 });
+test('admin AI settings endpoints require auth, validate input, persist changes for /v1/chat, and reset cleanly', async () => {
+  const seenModels: string[] = [];
+  const provider: AiProvider = {
+    async *stream(request) { seenModels.push(request.model.id); yield 'ok'; },
+    async complete(request) { seenModels.push(request.model.id); return 'ok'; },
+  };
+  const app = Fastify();
+  await registerAiRoutes(app, {
+    provider,
+    requireAdmin: async (request, reply) => {
+      if (request.headers.authorization !== 'synthetic-test-session') {
+        reply.code(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Login required' } });
+      }
+    },
+  });
+  try {
+    await app.ready();
+    assert.equal((await app.inject({ method: 'GET', url: '/v1/admin/ai/settings' })).statusCode, 401);
+    const initial = await app.inject({ method: 'GET', url: '/v1/admin/ai/settings', headers: { authorization: 'synthetic-test-session' } });
+    assert.equal(initial.statusCode, 200);
+    assert.equal(initial.json().isCustomized, false);
+    assert.equal(initial.json().settings.effortModels.fast, 'gpt-4o-mini');
+
+    const bad = await app.inject({
+      method: 'PATCH',
+      url: '/v1/admin/ai/settings',
+      headers: { authorization: 'synthetic-test-session' },
+      payload: {
+        effortModels: { fast: 'invalid model id', normal: 'gpt-4.1-mini', think: 'gpt-5-mini' },
+        personaModels: { daily: null, report: null, coding: null },
+        visionModelId: 'gpt-4o-mini',
+        classifierModelId: null,
+        features: { routerV2: false, semanticClassifier: false, promptPreparation: false, multiModelOrchestration: false, qualityEvaluation: false, visionEnabled: true },
+      },
+    });
+    assert.equal(bad.statusCode, 400);
+
+    const updatedPayload = {
+      effortModels: { fast: 'operator/fast-custom', normal: 'gpt-4.1-mini', think: 'gpt-5-mini' },
+      personaModels: { daily: null, report: null, coding: 'operator/coding-custom' },
+      visionModelId: 'gpt-4o-mini',
+      classifierModelId: null,
+      features: { routerV2: true, semanticClassifier: false, promptPreparation: false, multiModelOrchestration: false, qualityEvaluation: false, visionEnabled: false },
+    };
+    const updated = await app.inject({
+      method: 'PATCH',
+      url: '/v1/admin/ai/settings',
+      headers: { authorization: 'synthetic-test-session' },
+      payload: updatedPayload,
+    });
+    assert.equal(updated.statusCode, 200);
+    assert.equal(updated.json().isCustomized, true);
+    assert.equal(updated.json().settings.personaModels.coding, 'operator/coding-custom');
+
+    const chatRes = await app.inject({
+      method: 'POST',
+      url: '/v1/chat',
+      payload: { persona: 'coding', effort: 'fast', messages: [{ role: 'user', content: 'Jelaskan fungsi rekursi.' }] },
+    });
+    assert.equal(chatRes.statusCode, 200);
+    assert.equal(seenModels[0], 'operator/coding-custom');
+
+    const reset = await app.inject({ method: 'DELETE', url: '/v1/admin/ai/settings', headers: { authorization: 'synthetic-test-session' } });
+    assert.equal(reset.statusCode, 200);
+    assert.equal(reset.json().isCustomized, false);
+  } finally {
+    await app.close();
+  }
+});
+
 test('closing HTTP stream propagates cancellation to upstream provider', async () => {
   let observedAbort: () => void = () => undefined;
   const aborted = new Promise<void>(resolve => { observedAbort = resolve; });

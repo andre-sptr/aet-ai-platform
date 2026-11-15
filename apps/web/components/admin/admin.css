@@ -1920,14 +1920,14 @@ dialog.admin-dialog > .admin-form-actions {
   }
 }
 
-/* AI Model Tester Workspace */
-.aet-admin .admin-ai-workspace {
+/* AI Model Configuration & Tester Workspace */
+.aet-admin .admin-ai-page {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
   gap: 1.5rem;
-  align-items: start;
 }
 
+.aet-admin .admin-ai-catalog-card,
+.aet-admin .admin-ai-settings-card,
 .aet-admin .admin-model-panel {
   max-width: none;
   padding: 0;
@@ -1935,7 +1935,13 @@ dialog.admin-dialog > .admin-form-actions {
   border: 1px solid #dce5f2;
   border-radius: 1rem;
   box-shadow: 0 12px 28px -22px rgba(12, 33, 66, 0.25);
-  overflow: hidden;
+}
+
+.aet-admin .admin-ai-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
+  gap: 1.5rem;
+  align-items: start;
 }
 
 .aet-admin .admin-model-catalog-bar {
@@ -1947,6 +1953,42 @@ dialog.admin-dialog > .admin-form-actions {
   padding: 1.25rem 1.5rem;
   background: #f8fafd;
   border-bottom: 1px solid #e6edf7;
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+}
+
+.aet-admin .admin-ai-catalog-card > .admin-ai-catalog-banner:last-child {
+  border-bottom: 0;
+  border-radius: calc(1rem - 1px);
+}
+
+.aet-admin .admin-ai-catalog-card > .admin-model-feedback {
+  margin: 0 1.5rem 1.25rem;
+}
+
+.aet-admin .admin-model-panel-subhead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafd;
+  border-bottom: 1px solid #e6edf7;
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+}
+
+.aet-admin .admin-model-panel-subhead h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-model-panel-subhead p {
+  margin: 0.3rem 0 0;
+  font-size: 0.83rem;
+  line-height: 1.45;
+  color: #52637a;
 }
 
 .aet-admin .admin-model-catalog-info {
@@ -2046,47 +2088,585 @@ dialog.admin-dialog > .admin-form-actions {
   font-variant-numeric: tabular-nums;
 }
 
-.aet-admin .admin-select-wrap {
+/* Bounded Searchable Model Dropdown */
+.aet-admin .admin-model-picker {
   position: relative;
+  width: 100%;
+  max-width: 24rem;
+}
+
+.aet-admin .admin-model-picker.is-compact {
+  max-width: 21.5rem;
+}
+
+.aet-admin .admin-model-picker.is-open {
+  z-index: 35;
+}
+
+.aet-admin .admin-model-picker-trigger {
+  width: 100%;
+  min-height: 44px;
   display: flex;
   align-items: center;
-}
-
-.aet-admin .admin-select-wrap select {
-  width: 100%;
-  min-height: 46px;
-  appearance: none;
-  -webkit-appearance: none;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.62rem 0.9rem;
   border: 1px solid #cbd7e8;
   border-radius: 0.65rem;
-  padding: 0.7rem 2.65rem 0.7rem 0.9rem;
   background: #ffffff;
   color: #0c2142;
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.35;
+  text-align: left;
   cursor: pointer;
-  transition: border-color 140ms ease, background-color 140ms ease;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
 }
 
-.aet-admin .admin-select-wrap select:disabled {
-  background: #f1f5fb;
-  color: #64748b;
-  cursor: not-allowed;
+.aet-admin .admin-model-picker-trigger:hover:not(:disabled) {
+  border-color: #93b8f2;
+  background: #fafcff;
 }
 
-.aet-admin .admin-select-wrap select:focus-visible {
+.aet-admin .admin-model-picker-trigger:focus-visible {
   outline: 2px solid #0056d2;
   outline-offset: 2px;
   border-color: #0056d2;
 }
 
-.aet-admin .admin-select-icon {
-  position: absolute;
-  right: 0.9rem;
+.aet-admin .admin-model-picker-trigger:disabled {
+  background: #f1f5fb;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.aet-admin .admin-model-picker-trigger.is-invalid {
+  border-color: #c81e1e;
+  background-color: #fff6f6;
+}
+
+.aet-admin .admin-field:has(.admin-model-picker-trigger.is-invalid) > label {
+  color: #991b1b;
+}
+
+.aet-admin .admin-model-picker-value {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aet-admin .admin-model-picker-value.is-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.88rem;
+}
+
+.aet-admin .admin-model-picker-value.is-placeholder {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.aet-admin .admin-model-picker-chevron {
+  flex: none;
   color: #475569;
-  pointer-events: none;
+  transition: transform 150ms ease;
+}
+
+.aet-admin .admin-model-picker-chevron.is-rotated {
+  transform: rotate(180deg);
+}
+
+.aet-admin .admin-model-picker-popover {
+  position: absolute;
+  top: calc(100% + 0.4rem);
+  left: 0;
+  width: 100%;
+  max-width: 26rem;
+  min-width: min(17rem, 100%);
+  background: #ffffff;
+  border: 1px solid #cbd7e8;
+  border-radius: 0.75rem;
+  box-shadow: 0 18px 36px -16px rgba(12, 33, 66, 0.28);
+  z-index: 40;
+  overflow: hidden;
+}
+
+.aet-admin .admin-model-picker-popover.is-upward {
+  top: auto;
+  bottom: calc(100% + 0.4rem);
+}
+
+.aet-admin .admin-model-picker-search {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.7rem;
+  background: #f8fafd;
+  border-bottom: 1px solid #e6edf7;
+}
+
+.aet-admin .admin-model-picker-search-icon {
+  flex: none;
+  color: #64748b;
+}
+
+.aet-admin .admin-model-picker-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  background: transparent;
+  color: #0c2142;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: max(1rem, 0.85rem);
+  line-height: 1.4;
+  padding: 0.15rem 0;
+  outline: none;
+}
+
+.aet-admin .admin-model-picker-search input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.aet-admin .admin-model-picker-count {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #52637a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-model-picker-clear {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 999px;
+  background: #e2e8f2;
+  color: #1e293b;
+  cursor: pointer;
+}
+
+.aet-admin .admin-model-picker-clear:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 1px;
+}
+
+.aet-admin .admin-model-picker-list {
+  max-height: 224px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  padding: 0.35rem;
+  display: grid;
+  gap: 0.15rem;
+}
+
+.aet-admin .admin-model-picker-option {
+  width: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border: 0;
+  border-radius: 0.55rem;
+  background: transparent;
+  color: #0c2142;
+  text-align: left;
+  cursor: pointer;
+}
+
+.aet-admin .admin-model-picker-option:hover,
+.aet-admin .admin-model-picker-option.is-highlighted {
+  background: #f0f5ff;
+}
+
+.aet-admin .admin-model-picker-option.is-selected {
+  background: #e8f1ff;
+  color: #0044ab;
+}
+
+.aet-admin .admin-model-picker-option-text {
+  min-width: 0;
+  flex: 1;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.aet-admin .admin-model-picker-option-text strong {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.aet-admin .admin-model-picker-option-text strong.is-mono {
+  font-family: var(--font-mono), ui-monospace, monospace;
+}
+
+.aet-admin .admin-model-picker-option-text small {
+  font-size: 0.74rem;
+  color: #52637a;
+  line-height: 1.3;
+}
+
+.aet-admin .admin-model-picker-check {
+  flex: none;
+  color: #0056d2;
+}
+
+.aet-admin .admin-model-picker-empty {
+  margin: 0;
+  padding: 1rem 0.75rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #52637a;
+}
+
+/* AET AI Runtime Settings Card */
+.aet-admin .admin-ai-settings-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafd;
+  border-bottom: 1px solid #e6edf7;
+  border-radius: calc(1rem - 1px) calc(1rem - 1px) 0 0;
+}
+
+.aet-admin .admin-ai-settings-title {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 46rem;
+}
+
+.aet-admin .admin-ai-settings-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.aet-admin .admin-ai-settings-icon {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.55rem;
+  background: #e8f1ff;
+  color: #0044ab;
+}
+
+.aet-admin .admin-ai-settings-heading-row h2 {
+  margin: 0;
+  font-size: 1.04rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-ai-settings-title p {
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.aet-admin .admin-ai-settings-updated {
+  font-size: 0.78rem;
+  color: #52637a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-ai-settings-state,
+.aet-admin .admin-ai-settings-error-state {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding: 1.5rem;
+  color: #334155;
+  font-size: 0.9rem;
+}
+
+.aet-admin .admin-ai-settings-error-state {
+  color: #991b1b;
+}
+
+.aet-admin .admin-ai-settings-error-state p {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+}
+
+.aet-admin .admin-ai-settings-form {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.aet-admin .admin-ai-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.aet-admin .admin-ai-settings-group {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.aet-admin .admin-ai-group-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 1px solid #e6edf7;
+}
+
+.aet-admin .admin-ai-group-header h3 {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-ai-group-header h3 svg {
+  color: #0056d2;
+}
+
+.aet-admin .admin-ai-group-caption {
+  font-size: 0.76rem;
+  color: #52637a;
+}
+
+.aet-admin .admin-ai-setting-block {
+  display: grid;
+  gap: 0.65rem;
+  padding: 0.95rem 1.05rem;
+  border-radius: 0.8rem;
+  border: 1px solid #e6edf7;
+  background: #f9fbff;
+}
+
+.aet-admin .admin-ai-block-label {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.aet-admin .admin-ai-setting-rows {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.aet-admin .admin-ai-setting-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem 1rem;
+}
+
+.aet-admin .admin-ai-setting-row + .admin-ai-setting-row {
+  padding-top: 0.75rem;
+  border-top: 1px solid #eaf0f8;
+}
+
+.aet-admin .admin-ai-setting-copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 11rem;
+  flex: 1 1 13rem;
+}
+
+.aet-admin .admin-ai-setting-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-ai-setting-copy small {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: #52637a;
+}
+
+.aet-admin .admin-ai-vision-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.aet-admin .admin-switch-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.aet-admin .admin-switch-text {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.aet-admin .admin-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 44px;
+  height: 26px;
+  flex: none;
+}
+
+.aet-admin .admin-switch input {
+  position: absolute;
+  inset: -9px -2px;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.aet-admin .admin-switch-track {
+  width: 44px;
+  height: 26px;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: background-color 140ms ease;
+  position: relative;
+}
+
+.aet-admin .admin-switch-track::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.25);
+  transition: transform 140ms ease;
+}
+
+.aet-admin .admin-switch input:checked + .admin-switch-track {
+  background: #0056d2;
+}
+
+.aet-admin .admin-switch input:checked + .admin-switch-track::after {
+  transform: translateX(18px);
+}
+
+.aet-admin .admin-switch input:focus-visible + .admin-switch-track {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-switch input:disabled {
+  cursor: not-allowed;
+}
+
+.aet-admin .admin-switch input:disabled + .admin-switch-track {
+  opacity: 0.55;
+}
+
+.aet-admin .admin-ai-toggle-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.aet-admin .admin-ai-toggle-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid #e6edf7;
+  background: #f9fbff;
+}
+
+.aet-admin .admin-ai-toggle-text {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.aet-admin .admin-ai-toggle-text label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #0c2142;
+  cursor: pointer;
+}
+
+.aet-admin .admin-ai-toggle-text small {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: #52637a;
+}
+
+.aet-admin .admin-ai-dependency-note {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 0.2rem;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.aet-admin .admin-ai-bounds-note {
+  margin: 0;
+}
+
+.aet-admin .admin-ai-settings-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #eaf0f8;
+}
+
+.aet-admin .admin-ai-settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.aet-admin .admin-ai-settings-actions .button {
+  min-height: 44px;
+  cursor: pointer;
 }
 
 .aet-admin .admin-model-panel .admin-field textarea {
@@ -2109,12 +2689,12 @@ dialog.admin-dialog > .admin-form-actions {
   border-color: #0056d2;
 }
 
-.aet-admin .admin-model-panel .admin-field :is(select, textarea):user-invalid {
+.aet-admin .admin-model-panel .admin-field textarea:user-invalid {
   border-color: #c81e1e;
   background-color: #fff6f6;
 }
 
-.aet-admin .admin-model-panel .admin-field:has(:user-invalid) label {
+.aet-admin .admin-model-panel .admin-field:has(textarea:user-invalid) label {
   color: #991b1b;
 }
 
@@ -2137,6 +2717,7 @@ dialog.admin-dialog > .admin-form-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: 0.75rem 1rem;
   padding-top: 0.35rem;
 }
@@ -2314,25 +2895,38 @@ dialog.admin-dialog > .admin-form-actions {
 }
 
 @media (max-width: 1080px) {
-  .aet-admin .admin-ai-workspace {
+  .aet-admin .admin-ai-workspace,
+  .aet-admin .admin-ai-settings-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 767px) {
   .aet-admin .admin-model-catalog-bar,
+  .aet-admin .admin-model-panel-subhead,
+  .aet-admin .admin-ai-settings-head,
+  .aet-admin .admin-ai-settings-form,
   .aet-admin .admin-model-form,
   .aet-admin .admin-model-result,
   .aet-admin .admin-model-meta-card {
     padding: 1.1rem;
   }
 
-  .aet-admin .admin-model-feedback {
-    margin: 1rem 1.1rem 0;
+  .aet-admin .admin-model-feedback,
+  .aet-admin .admin-ai-catalog-card > .admin-model-feedback {
+    margin: 0.9rem 1.1rem 1rem;
+  }
+
+  .aet-admin .admin-model-picker,
+  .aet-admin .admin-model-picker.is-compact,
+  .aet-admin .admin-model-picker-popover {
+    max-width: 100%;
   }
 
   .aet-admin .admin-reload-button,
-  .aet-admin .admin-model-form-footer .button {
+  .aet-admin .admin-model-form-footer .button,
+  .aet-admin .admin-ai-settings-actions,
+  .aet-admin .admin-ai-settings-actions .button {
     width: 100%;
     justify-content: center;
   }

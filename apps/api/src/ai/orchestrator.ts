@@ -6,6 +6,7 @@ import { classifyHybrid, classifyHybridHeuristically, selectModelsHybrid, type T
 import { createSumopodProvider, type AiProvider, type ProviderMessage, type ProviderRequest } from './provider.js';
 import { type ModelSpec, MODEL_CATALOG } from './models.js';
 import { getModelRegistry } from './models/registry.js';
+import { classifierModelForSettings, selectModelsWithSettings, type AiSettings } from './settings.js';
 import { preparePrompt } from './prompting/prompt-builder.js';
 import { AiError, safeAiError } from './errors.js';
 import { executeTool, type ToolResult } from './tools.js';
@@ -18,6 +19,7 @@ export type RunOptions = {
   signal?: AbortSignal;
   provider?: AiProvider;
   catalog?: readonly ModelSpec[];
+  settings?: AiSettings;
   deadlineMs?: number;
   onDiagnostic?: (record: { task: string; model: string; strategy: string; durationMs: number; outcome: string }) => void;
 };
@@ -55,22 +57,32 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
   try {
     const external = options.signal ?? new AbortController().signal;
     external.throwIfAborted();
+    const activeSettings = options.settings;
+    const routerV2 = activeSettings ? activeSettings.features.routerV2 : AI_ROUTER_V2;
+    const semanticClassifierEnabled = activeSettings ? activeSettings.features.semanticClassifier : AI_SEMANTIC_CLASSIFIER;
+    const promptPreparationEnabled = activeSettings ? activeSettings.features.promptPreparation : AI_PROMPT_PREPARATION;
+    const multiModelEnabled = activeSettings ? activeSettings.features.multiModelOrchestration : AI_MULTI_MODEL_ORCHESTRATION;
+    const qualityEvaluationEnabled = activeSettings ? activeSettings.features.qualityEvaluation : AI_QUALITY_EVALUATION;
     // Preserve the legacy route as the default. V2 is opt-in and additive.
-    task = AI_ROUTER_V2 ? classifyHybridHeuristically(request) : classify(request);
+    task = routerV2 ? classifyHybridHeuristically(request) : classify(request);
     strategy = strategyFor(task, request.effort);
     const deadline = AbortSignal.timeout(options.deadlineMs ?? strategy.deadlineMs);
     deadlineSignal = deadline;
     const signal = AbortSignal.any([external, deadline]);
     const provider = options.provider ?? createSumopodProvider();
     let calls = 0;
-    if (AI_ROUTER_V2 && AI_SEMANTIC_CLASSIFIER && (task as TaskProfile).needsSemanticClassification) {
+    if (routerV2 && semanticClassifierEnabled && (task as TaskProfile).needsSemanticClassification) {
       task = await classifyHybrid(request, {
         signal,
         semanticClassifier: async (chat, heuristic, classifierSignal) => {
-          const classifierRegistry = getModelRegistry(options.catalog ?? MODEL_CATALOG).filter(candidate => candidate.enabled && candidate.availability !== 'unavailable');
-          const classifierModel = classifierRegistry.find(candidate => candidate.id === 'gpt-4o-mini')
-            ?? classifierRegistry.find(candidate => !candidate.vision)
-            ?? classifierRegistry[0];
+          const classifierModel = activeSettings
+            ? classifierModelForSettings(activeSettings, options.catalog ?? MODEL_CATALOG)
+            : (() => {
+                const classifierRegistry = getModelRegistry(options.catalog ?? MODEL_CATALOG).filter(candidate => candidate.enabled && candidate.availability !== 'unavailable');
+                return classifierRegistry.find(candidate => candidate.id === 'gpt-4o-mini')
+                  ?? classifierRegistry.find(candidate => !candidate.vision)
+                  ?? classifierRegistry[0];
+              })();
           if (!classifierModel || calls >= strategy!.maxModelCalls) return null;
           calls++;
           const userText = chat.messages.filter(message => message.role === 'user').slice(-4).map(message => message.content).join('\n').slice(0, 8_000);
@@ -92,9 +104,11 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
       });
     }
     strategy = strategyFor(task, request.effort);
-    const candidates = AI_ROUTER_V2
-      ? selectModelsHybrid(task as TaskProfile, request.effort, options.catalog ?? MODEL_CATALOG)
-      : selectModels(task, request.effort, options.catalog ?? MODEL_CATALOG);
+    const candidates = activeSettings
+      ? selectModelsWithSettings(request, task, activeSettings, options.catalog ?? MODEL_CATALOG)
+      : routerV2
+        ? selectModelsHybrid(task as TaskProfile, request.effort, options.catalog ?? MODEL_CATALOG)
+        : selectModels(task, request.effort, options.catalog ?? MODEL_CATALOG);
     let model = candidates[0]!;
     chosenModel = model.id;
     let steps = 0;
@@ -119,7 +133,7 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
       throw new AiError('PROVIDER_ERROR', 'Penyedia tidak dapat menyelesaikan jawaban.', 502);
     };
     step(); yield { event: 'status', data: { message: 'Menganalisis permintaan' } };
-    step(); yield { event: 'metadata', data: { model: model.id, strategy: strategy.name, taskType: task.taskType, complexity: task.complexity, modelChoiceLimited: candidates.length === 1, availabilityVerified: false, routerVersion: AI_ROUTER_V2 ? 'v2' : 'legacy', ...(AI_ROUTER_V2 ? { routingConfidence: (task as TaskProfile).confidence, routingDomains: (task as TaskProfile).domain } : {}) } };
+    step(); yield { event: 'metadata', data: { model: model.id, strategy: strategy.name, taskType: task.taskType, complexity: task.complexity, modelChoiceLimited: candidates.length === 1, availabilityVerified: false, routerVersion: routerV2 ? 'v2' : 'legacy', ...(routerV2 ? { routingConfidence: (task as TaskProfile).confidence, routingDomains: (task as TaskProfile).domain } : {}) } };
     const results: ToolResult[] = [];
     for (const call of task.tools.slice(0, strategy.maxTools)) {
       step(); yield { event: 'tool', data: { name: call.name, status: 'running', summary: 'Menjalankan alat yang diperlukan' } };
@@ -151,8 +165,8 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
     } else {
       let messages = messagesFor(request, systemText(request, task, results));
       let promptPreparationMetrics: ReturnType<typeof preparePrompt>['metrics'] | undefined;
-      if (AI_PROMPT_PREPARATION) {
-        const promptTask = AI_ROUTER_V2 ? task as TaskProfile : classifyHybridHeuristically(request);
+      if (promptPreparationEnabled) {
+        const promptTask = routerV2 ? task as TaskProfile : classifyHybridHeuristically(request);
         const prepared = preparePrompt(request, systemText(request, task, results), promptTask, {
           maxContextCharacters: model.maxContextCharacters,
           reserveCharacters: 1_000,
@@ -162,20 +176,21 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
         yield { event: 'status', data: { message: 'Mengoptimalkan instruksi dan konteks percakapan' } };
       }
       const useAdaptiveOrchestration =
-        AI_ROUTER_V2 &&
-        AI_MULTI_MODEL_ORCHESTRATION &&
+        routerV2 &&
+        multiModelEnabled &&
         (task as TaskProfile).complexity === 'complex' &&
         request.effort !== 'fast' &&
         strategy.maxModelCalls - calls >= 4;
 
       if (useAdaptiveOrchestration) {
         yield { event: 'status', data: { message: 'Menjalankan adaptive multi-model orchestration' } };
+        const adaptiveCatalog = activeSettings ? candidates : (options.catalog ?? MODEL_CATALOG);
         const pipeline = runAdaptivePipeline({
           provider,
           messages,
           task: task as TaskProfile,
           effort: request.effort,
-          candidates: getModelRegistry(options.catalog ?? MODEL_CATALOG).filter(candidate =>
+          candidates: getModelRegistry(adaptiveCatalog).filter(candidate =>
             candidate.enabled && candidate.availability !== 'unavailable' &&
             (!((task as TaskProfile).requiredCapabilities.vision) || candidate.vision) &&
             (task as TaskProfile).contextCharacters <= candidate.maxContextCharacters
@@ -183,7 +198,7 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
           signal,
           maxModelCalls: strategy.maxModelCalls - calls,
           maxOutputTokens: strategy.maxOutputTokens,
-          qualityEvaluation: AI_QUALITY_EVALUATION,
+          qualityEvaluation: qualityEvaluationEnabled,
           evidence: [
             ...results.map(result => ({
               name: result.name,

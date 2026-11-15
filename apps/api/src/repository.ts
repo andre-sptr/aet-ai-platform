@@ -1,5 +1,7 @@
 import type { News, Event, TeamMember } from '@aet/contracts';
 import type { AdminIdentity } from './auth.js';
+import type { AiSettings } from './ai/settings.js';
+import { ApiError } from './errors.js';
 
 export type Resource = 'news' | 'events' | 'team';
 export type ContentRecord = News | Event | TeamMember;
@@ -17,7 +19,16 @@ export interface Repository {
   create(resource: Resource, input: ContentInput): Promise<ContentRecord>;
   update(resource: Resource, id: string, input: ContentInput): Promise<ContentRecord>;
   delete(resource: Resource, id: string): Promise<void>;
+  getAiSettings?(): Promise<AiSettings | null>;
+  saveAiSettings?(settings: AiSettings): Promise<AiSettings>;
+  resetAiSettings?(): Promise<void>;
   close?(): Promise<void>;
+}
+
+function isMissingAiSettingsTable(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const record = error as { code?: string; meta?: { code?: string } };
+  return record.code === '42P01' || (record.code === 'P2010' && record.meta?.code === '42P01');
 }
 
 function serialize(record: unknown): ContentRecord {
@@ -85,6 +96,49 @@ export async function createPrismaRepository(databaseUrl: string): Promise<Repos
       if (resource === 'news') await db.news.delete({ where: { id } });
       else if (resource === 'events') await db.event.delete({ where: { id } });
       else await db.teamMember.delete({ where: { id } });
+    },
+    async getAiSettings() {
+      try {
+        const rows = await db.$queryRaw<{ config: unknown; updatedAt: Date }[]>`
+          SELECT "config", "updatedAt" FROM "AiSetting" WHERE "id" = 'default' LIMIT 1
+        `;
+        const row = rows[0];
+        if (!row || !row.config || typeof row.config !== 'object' || Array.isArray(row.config)) return null;
+        return {
+          ...(row.config as Record<string, unknown>),
+          updatedAt: new Date(row.updatedAt).toISOString(),
+        } as AiSettings;
+      } catch (error) {
+        if (isMissingAiSettingsTable(error)) return null;
+        throw error;
+      }
+    },
+    async saveAiSettings(settings) {
+      const payload = { ...settings };
+      delete payload.updatedAt;
+      try {
+        const rows = await db.$queryRaw<{ updatedAt: Date }[]>`
+          INSERT INTO "AiSetting" ("id", "config", "updatedAt")
+          VALUES ('default', ${JSON.stringify(payload)}::jsonb, NOW())
+          ON CONFLICT ("id") DO UPDATE
+          SET "config" = EXCLUDED."config", "updatedAt" = NOW()
+          RETURNING "updatedAt"
+        `;
+        const updatedAt = rows[0]?.updatedAt ? new Date(rows[0].updatedAt).toISOString() : new Date().toISOString();
+        return { ...payload, updatedAt };
+      } catch (error) {
+        if (isMissingAiSettingsTable(error)) {
+          throw new ApiError(503, 'MIGRATION_REQUIRED', 'Tabel pengaturan AI belum dimigrasi. Jalankan npm run db:migrate terlebih dahulu.');
+        }
+        throw error;
+      }
+    },
+    async resetAiSettings() {
+      try {
+        await db.$executeRaw`DELETE FROM "AiSetting" WHERE "id" = 'default'`;
+      } catch (error) {
+        if (!isMissingAiSettingsTable(error)) throw error;
+      }
     },
     close: () => db.$disconnect(),
   };

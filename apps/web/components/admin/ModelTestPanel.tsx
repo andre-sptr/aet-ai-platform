@@ -5,7 +5,6 @@ import {
   AlertCircle,
   Check,
   CheckCircle2,
-  ChevronDown,
   Clock3,
   Copy,
   Database,
@@ -16,16 +15,16 @@ import {
   X,
 } from "lucide-react";
 import { api } from "../../lib/api";
-
-const MODEL_CACHE_KEY = "aet-ai:admin:sumopod-models:v1";
-const MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
-const DEFAULT_MODEL_IDS = ["gpt-4o-mini", "gpt-4.1-mini", "gpt-5-mini"] as const;
-
-type CachedModels = {
-  models: string[];
-  reloadedAt: string;
-  selectedModelId?: string;
-};
+import {
+  DEFAULT_MODEL_IDS,
+  formatWibTimestamp,
+  readModelCache,
+  sanitizeModelIds,
+  writeModelCache,
+  type AiSettings,
+  type CachedModels,
+} from "../../lib/ai-models";
+import { ModelDropdown } from "./ModelDropdown";
 
 type TestResult = {
   modelId: string;
@@ -34,67 +33,14 @@ type TestResult = {
   elapsedMs: number;
 };
 
-const wibDateTimeFormatter = new Intl.DateTimeFormat("id-ID", {
-  dateStyle: "medium",
-  timeStyle: "short",
-  timeZone: "Asia/Jakarta",
-});
+type ModelTestPanelProps = {
+  sharedCatalog?: CachedModels | null;
+  onSharedCatalogChange?: (next: CachedModels) => void;
+  showCatalogHeader?: boolean;
+  activeSettings?: { settings: AiSettings; isCustomized: boolean } | null;
+};
 
-function formatWibTimestamp(iso: string) {
-  const time = Date.parse(iso);
-  if (Number.isNaN(time)) return "";
-  return `${wibDateTimeFormatter.format(new Date(time))} WIB`;
-}
-
-function sanitizeModelIds(values: unknown): string[] {
-  if (!Array.isArray(values)) return [];
-  const seen = new Set<string>();
-  for (const entry of values) {
-    if (typeof entry !== "string") continue;
-    const id = entry.trim();
-    if (id && id.length <= 160 && MODEL_ID_PATTERN.test(id)) {
-      seen.add(id);
-    }
-  }
-  return [...seen];
-}
-
-function readModelCache(): CachedModels | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(MODEL_CACHE_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-    const record = parsed as Record<string, unknown>;
-    const models = sanitizeModelIds(record.models);
-    if (!models.length) return null;
-    const reloadedAt =
-      typeof record.reloadedAt === "string" && !Number.isNaN(Date.parse(record.reloadedAt))
-        ? record.reloadedAt
-        : "";
-    if (!reloadedAt) return null;
-    const selectedModelId =
-      typeof record.selectedModelId === "string" && models.includes(record.selectedModelId)
-        ? record.selectedModelId
-        : undefined;
-    return { models, reloadedAt, selectedModelId };
-  } catch {
-    return null;
-  }
-}
-
-function writeModelCache(payload: CachedModels): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    window.localStorage.setItem(MODEL_CACHE_KEY, JSON.stringify(payload));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function isControlUserInvalid(element: HTMLSelectElement | HTMLTextAreaElement) {
+function isTextareaUserInvalid(element: HTMLTextAreaElement) {
   try {
     return element.matches(":user-invalid");
   } catch {
@@ -102,8 +48,13 @@ function isControlUserInvalid(element: HTMLSelectElement | HTMLTextAreaElement) 
   }
 }
 
-export function ModelTestPanel() {
-  const [cachedCatalog, setCachedCatalog] = useState<CachedModels | null>(null);
+export function ModelTestPanel({
+  sharedCatalog,
+  onSharedCatalogChange,
+  showCatalogHeader = true,
+  activeSettings = null,
+}: ModelTestPanelProps = {}) {
+  const [localCatalog, setLocalCatalog] = useState<CachedModels | null>(null);
   const [modelId, setModelId] = useState("");
   const [prompt, setPrompt] = useState("");
   const [reloading, setReloading] = useState(false);
@@ -114,21 +65,44 @@ export function ModelTestPanel() {
   const [result, setResult] = useState<TestResult | null>(null);
   const [copied, setCopied] = useState(false);
 
+  const isControlled = sharedCatalog !== undefined;
+  const cachedCatalog = isControlled ? sharedCatalog : localCatalog;
+
   useEffect(() => {
-    const stored = readModelCache();
-    if (!stored) return;
-    setCachedCatalog(stored);
-    setModelId(stored.selectedModelId ?? stored.models[0] ?? "");
-  }, []);
+    if (isControlled) return;
+    let active = true;
+    queueMicrotask(() => {
+      if (!active) return;
+      const stored = readModelCache();
+      if (!stored) return;
+      setLocalCatalog(stored);
+      setModelId(stored.selectedModelId ?? stored.models[0] ?? "");
+    });
+    return () => {
+      active = false;
+    };
+  }, [isControlled]);
+
+  useEffect(() => {
+    if (!isControlled || !sharedCatalog?.models.length) return;
+    queueMicrotask(() => {
+      setModelId((current) => {
+        if (current && sharedCatalog.models.includes(current)) return current;
+        return sharedCatalog.selectedModelId ?? sharedCatalog.models[0] ?? "";
+      });
+    });
+  }, [isControlled, sharedCatalog]);
 
   const availableModels = cachedCatalog?.models.length ? cachedCatalog.models : [...DEFAULT_MODEL_IDS];
   const busy = reloading || testing;
 
   function handleSelectModel(nextId: string) {
     setModelId(nextId);
+    if (nextId) setModelInvalid(false);
     if (cachedCatalog && nextId && cachedCatalog.models.includes(nextId)) {
       const updatedCache: CachedModels = { ...cachedCatalog, selectedModelId: nextId };
-      setCachedCatalog(updatedCache);
+      if (isControlled) onSharedCatalogChange?.(updatedCache);
+      else setLocalCatalog(updatedCache);
       writeModelCache(updatedCache);
     }
   }
@@ -157,7 +131,8 @@ export function ModelTestPanel() {
         selectedModelId: nextSelected,
       };
       const saved = writeModelCache(nextCache);
-      setCachedCatalog(nextCache);
+      if (isControlled) onSharedCatalogChange?.(nextCache);
+      else setLocalCatalog(nextCache);
       setModelId(nextSelected);
       setModelInvalid(false);
       setCatalogFeedback({
@@ -176,12 +151,24 @@ export function ModelTestPanel() {
     }
   }
 
-  async function submit(event: FormEvent) {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
     const chosenModel = modelId.trim();
     const chosenPrompt = prompt.trim();
-    if (!chosenModel || !chosenPrompt) return;
+    const hasMissingModel = !chosenModel;
+    const hasMissingPrompt = !chosenPrompt;
+    setModelInvalid(hasMissingModel);
+    setPromptInvalid(hasMissingPrompt);
+    if (hasMissingModel) {
+      document.getElementById("ai-model-id")?.focus();
+      return;
+    }
+    if (hasMissingPrompt) {
+      document.getElementById("ai-prompt")?.focus();
+      return;
+    }
+
     setTesting(true);
     setResult(null);
     setCopied(false);
@@ -221,35 +208,48 @@ export function ModelTestPanel() {
   return (
     <div className="admin-ai-workspace">
       <section className="admin-model-panel" aria-label="Pengujian model Sumopod">
-        <div className="admin-model-catalog-bar">
-          <div className="admin-model-catalog-info">
-            <div className="admin-model-catalog-title">
-              <h2>Katalog model Sumopod</h2>
-              <span className={`admin-model-source ${cachedCatalog ? "is-cached" : ""}`}>
-                <Database size={12} aria-hidden="true" />
+        {showCatalogHeader ? (
+          <div className="admin-model-catalog-bar">
+            <div className="admin-model-catalog-info">
+              <div className="admin-model-catalog-title">
+                <h2>Katalog model Sumopod</h2>
+                <span className={`admin-model-source ${cachedCatalog ? "is-cached" : ""}`}>
+                  <Database size={12} aria-hidden="true" />
+                  {cachedCatalog
+                    ? `Cache website · ${availableModels.length} model`
+                    : `Kandidat awal · ${availableModels.length} model`}
+                </span>
+              </div>
+              <p className="admin-model-catalog-meta">
                 {cachedCatalog
-                  ? `Cache website · ${availableModels.length} model`
-                  : `Kandidat awal · ${availableModels.length} model`}
-              </span>
+                  ? `Terakhir dimuat ulang ${formatWibTimestamp(cachedCatalog.reloadedAt)}`
+                  : "Ambil daftar ID model aktif akun operator dari https://ai.sumopod.com/v1/models."}
+              </p>
             </div>
-            <p className="admin-model-catalog-meta">
-              {cachedCatalog
-                ? `Terakhir dimuat ulang ${formatWibTimestamp(cachedCatalog.reloadedAt)}`
-                : "Ambil daftar ID model aktif akun operator dari https://ai.sumopod.com/v1/models."}
-            </p>
+            <button
+              type="button"
+              className="button button-secondary admin-reload-button"
+              onClick={() => void reloadModels()}
+              disabled={busy}
+            >
+              <RefreshCw size={16} aria-hidden="true" className={reloading ? "animate-spin" : undefined} />
+              {reloading ? "Memuat model…" : "Reload model"}
+            </button>
           </div>
-          <button
-            type="button"
-            className="button button-secondary admin-reload-button"
-            onClick={() => void reloadModels()}
-            disabled={busy}
-          >
-            <RefreshCw size={16} aria-hidden="true" className={reloading ? "animate-spin" : undefined} />
-            {reloading ? "Memuat model…" : "Reload model"}
-          </button>
-        </div>
+        ) : (
+          <div className="admin-model-panel-subhead">
+            <div>
+              <h2>Uji respons model</h2>
+              <p>Kirim satu prompt uji terarah ke model Sumopod.</p>
+            </div>
+            <span className={`admin-model-source ${cachedCatalog ? "is-cached" : ""}`}>
+              <Database size={12} aria-hidden="true" />
+              {cachedCatalog ? `${availableModels.length} model siap uji` : `${availableModels.length} kandidat awal`}
+            </span>
+          </div>
+        )}
 
-        {catalogFeedback && (
+        {showCatalogHeader && catalogFeedback && (
           <div
             role={catalogFeedback.error ? "alert" : "status"}
             className={`admin-feedback ${catalogFeedback.error ? "admin-feedback-error" : "admin-feedback-success"} admin-feedback-banner admin-model-feedback`}
@@ -273,41 +273,30 @@ export function ModelTestPanel() {
           </div>
         )}
 
-        <form onSubmit={submit} aria-label="Uji model AI" className="admin-model-form">
+        <form onSubmit={submit} aria-label="Uji model AI" className="admin-model-form" noValidate>
           <div className="admin-field">
-            <label htmlFor="ai-model-id">Model ID</label>
-            <div className="admin-select-wrap">
-              <select
-                id="ai-model-id"
-                aria-label="Model ID"
-                name="modelId"
-                value={modelId}
-                required
-                aria-invalid={modelInvalid ? "true" : "false"}
-                aria-describedby={modelInvalid ? "ai-model-error" : "ai-model-hint"}
-                disabled={busy}
-                onChange={(event) => {
-                  handleSelectModel(event.target.value);
-                  if (modelInvalid) {
-                    setModelInvalid(isControlUserInvalid(event.currentTarget));
-                  }
-                }}
-                onBlur={(event) => setModelInvalid(isControlUserInvalid(event.currentTarget))}
-                onInvalid={(event) => setModelInvalid(isControlUserInvalid(event.currentTarget))}
-              >
-                <option value="" disabled>
-                  {cachedCatalog
-                    ? `Pilih dari ${availableModels.length} model Sumopod…`
-                    : "Pilih ID model atau klik Reload model…"}
-                </option>
-                {availableModels.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown size={17} aria-hidden="true" className="admin-select-icon" />
-            </div>
+            <label id="ai-model-id-label" htmlFor="ai-model-id">
+              Model ID
+            </label>
+            <ModelDropdown
+              id="ai-model-id"
+              labelId="ai-model-id-label"
+              name="modelId"
+              value={modelId}
+              models={availableModels}
+              onChange={handleSelectModel}
+              placeholder={
+                cachedCatalog
+                  ? `Pilih dari ${availableModels.length} model Sumopod…`
+                  : "Pilih ID model atau klik Reload model…"
+              }
+              required
+              invalid={modelInvalid}
+              errorId="ai-model-error"
+              hintId="ai-model-hint"
+              disabled={busy}
+              onBlurAfterTouch={(current) => setModelInvalid(!current.trim())}
+            />
             {modelInvalid ? (
               <small id="ai-model-error" className="admin-field-error">
                 Pilih salah satu Model ID sebelum mengirim pengujian.
@@ -315,8 +304,8 @@ export function ModelTestPanel() {
             ) : (
               <small id="ai-model-hint">
                 {cachedCatalog
-                  ? "Pilihan dropdown bersumber dari Sumopod."
-                  : "Menampilkan kandidat bawaan. Gunakan Reload model untuk memuat semua model dari akun Sumopod."}
+                  ? "Pilihan dropdown dari cache Sumopod."
+                  : "Gunakan Reload model untuk memuat semua model dari Sumopod."}
               </small>
             )}
           </div>
@@ -337,11 +326,14 @@ export function ModelTestPanel() {
               onChange={(event) => {
                 setPrompt(event.target.value);
                 if (promptInvalid) {
-                  setPromptInvalid(isControlUserInvalid(event.currentTarget));
+                  setPromptInvalid(!event.target.value.trim() && isTextareaUserInvalid(event.currentTarget));
                 }
               }}
-              onBlur={(event) => setPromptInvalid(isControlUserInvalid(event.currentTarget))}
-              onInvalid={(event) => setPromptInvalid(isControlUserInvalid(event.currentTarget))}
+              onBlur={(event) => {
+                if (event.currentTarget.value.trim()) setPromptInvalid(false);
+                else setPromptInvalid(isTextareaUserInvalid(event.currentTarget));
+              }}
+              onInvalid={(event) => setPromptInvalid(isTextareaUserInvalid(event.currentTarget))}
               rows={5}
               required
               maxLength={2000}
@@ -357,8 +349,7 @@ export function ModelTestPanel() {
           <div className="admin-static-note admin-model-callout" role="note">
             <Info size={18} aria-hidden="true" />
             <span>
-              Permintaan hanya dikirim saat Anda menekan <strong>Test</strong> atau{" "}
-              <strong>Reload model</strong>, menggunakan koneksi Sumopod dan API key yang tersimpan di
+              Permintaan hanya dikirim saat Anda menekan <strong>Test</strong>, menggunakan koneksi Sumopod dan API key yang tersimpan di
               backend. Kelola kredit dan batas penggunaan langsung di Sumopod.
             </span>
           </div>
@@ -467,6 +458,16 @@ export function ModelTestPanel() {
                   : "Kosong (masih memakai kandidat bawaan)"}
               </dd>
             </div>
+            {activeSettings && (
+              <div>
+                <dt>Ringkasan AET AI aktif</dt>
+                <dd>
+                  Fast: <code>{activeSettings.settings.effortModels.fast}</code> · Normal:{" "}
+                  <code>{activeSettings.settings.effortModels.normal}</code> · Think:{" "}
+                  <code>{activeSettings.settings.effortModels.think}</code>
+                </dd>
+              </div>
+            )}
             <div>
               <dt>Batas uji manual</dt>
               <dd>Prompt maks. 2.000 karakter · Jawaban maks. 800 token</dd>

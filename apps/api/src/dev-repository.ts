@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EventSchema, NewsSchema, TeamMemberSchema, type Event as AetEvent, type News, type TeamMember } from '@aet/contracts';
 import { hashPassword, type AdminIdentity } from './auth.js';
+import type { AiSettings } from './ai/settings.js';
 import type { AdminRecord, ContentInput, ContentRecord, Repository, Resource } from './repository.js';
 
 function resolveSeedPath(): string | null {
@@ -41,6 +42,7 @@ function loadSeedRecords(records: Record<Resource, Map<string, ContentRecord>>, 
 export function createDevFallbackRepository(seedPath = resolveSeedPath()): Repository {
   const admins = new Map<string, AdminRecord>();
   const sessions = new Map<string, { adminId: string; expiresAt: Date }>();
+  let aiSettings: AiSettings | null = null;
   const records: Record<Resource, Map<string, ContentRecord>> = {
     news: new Map(),
     events: new Map(),
@@ -112,6 +114,16 @@ export function createDevFallbackRepository(seedPath = resolveSeedPath()): Repos
       if (!records[resource].delete(id)) {
         throw Object.assign(new Error('Not found'), { code: 'P2025' });
       }
+    },
+    async getAiSettings() {
+      return aiSettings ? structuredClone(aiSettings) : null;
+    },
+    async saveAiSettings(settings: AiSettings) {
+      aiSettings = { ...structuredClone(settings), updatedAt: new Date().toISOString() };
+      return structuredClone(aiSettings);
+    },
+    async resetAiSettings() {
+      aiSettings = null;
     },
   };
 }

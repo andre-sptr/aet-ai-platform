@@ -210,20 +210,28 @@ async function run() {
     checks.push('Team create/edit/order/socials/delete and decoded image upload work with fixture storage adapter');
 
     stage = 'manual mocked model test';
+    const pickModel = async (label: string, modelId: string) => {
+      await page!.getByRole('button', { name: label, exact: true }).click();
+      await page!.getByLabel('Cari ID model', { exact: true }).fill(modelId);
+      await page!.getByRole('option', { name: modelId, exact: true }).click();
+    };
     await page.goto(`${origin}/admin/ai/`);
     assert.equal(providerCalls, 0);
     await write('POST', '/v1/admin/ai/models/reload', () => page!.getByRole('button', { name: 'Reload model', exact: true }).click());
-    await page.getByLabel('Model ID', { exact: true }).selectOption('operator/browser-fixture');
+    await pickModel('Academic Writer', 'operator/browser-fixture');
+    await write('PATCH', '/v1/admin/ai/settings', () => page!.getByRole('button', { name: 'Simpan pengaturan', exact: true }).click());
+    await write('DELETE', '/v1/admin/ai/settings', () => page!.getByRole('button', { name: 'Reset bawaan', exact: true }).click());
+    await pickModel('Model ID', 'operator/browser-fixture');
     await page.getByLabel('Prompt singkat', { exact: true }).fill('Prompt fixture browser.');
     assert.equal(providerCalls, 0);
     await write('POST', '/v1/admin/ai/model-test', () => page!.getByRole('button', { name: 'Test', exact: true }).click());
     await page.getByText(fixtureResponse, { exact: true }).waitFor();
     assert.equal(providerCalls, 1);
-    await page.getByLabel('Model ID', { exact: true }).selectOption('operator/fail-fixture');
+    await pickModel('Model ID', 'operator/fail-fixture');
     await write('POST', '/v1/admin/ai/model-test', () => page!.getByRole('button', { name: 'Test', exact: true }).click(), 502);
     await page.getByRole('alert').filter({ hasText: 'Kesalahan model tiruan.' }).waitFor();
     assert.equal(providerCalls, 2);
-    checks.push('Manual model panel reloads, caches, and tests dropdown models with explicit fixture responses');
+    checks.push('Manual model panel reloads, searches bounded dropdowns, configures AET AI models, and tests fixture responses');
 
     stage = 'desktop and mobile layout';
     await page.goto(`${origin}/admin/`);

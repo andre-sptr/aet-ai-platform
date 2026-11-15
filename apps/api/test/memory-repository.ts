@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AdminIdentity } from '../src/auth.js';
+import type { AiSettings } from '../src/ai/settings.js';
 import type { AdminRecord, ContentInput, ContentRecord, Repository, Resource } from '../src/repository.js';
 
 /** Disposable in-memory repository for HTTP boundary tests, never selected by production. */
@@ -7,6 +8,7 @@ export class MemoryRepository implements Repository {
   readonly admins = new Map<string, AdminRecord>();
   readonly sessions = new Map<string, { adminId: string; expiresAt: Date }>();
   readonly records: Record<Resource, Map<string, ContentRecord>> = { news: new Map(), events: new Map(), team: new Map() };
+  aiSettings: AiSettings | null = null;
   async ping() {}
   async findAdmin(username: string) { return this.admins.get(username) ?? null; }
   async createAdmin(username: string, passwordHash: string) {
@@ -43,4 +45,10 @@ export class MemoryRepository implements Repository {
     return record;
   }
   async delete(resource: Resource, id: string) { this.records[resource].delete(id); }
+  async getAiSettings() { return this.aiSettings ? structuredClone(this.aiSettings) : null; }
+  async saveAiSettings(settings: AiSettings) {
+    this.aiSettings = { ...structuredClone(settings), updatedAt: new Date().toISOString() };
+    return structuredClone(this.aiSettings);
+  }
+  async resetAiSettings() { this.aiSettings = null; }
 }

@@ -68,3 +68,9 @@ model Session {
 
   @@index([expiresAt])
 }
+
+model AiSetting {
+  id        String   @id
+  config    Json
+  updatedAt DateTime @updatedAt
+}

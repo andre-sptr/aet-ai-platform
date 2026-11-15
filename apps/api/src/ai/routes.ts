@@ -6,9 +6,15 @@ import { MODEL_CATALOG, type ModelSpec } from './models.js';
 import { orchestrate } from './orchestrator.js';
 import { AiError, safeAiError } from './errors.js';
 import { extractAttachment, DOCUMENT_LIMIT } from './attachments.js';
+import { aiSettingsUpdateSchema, defaultAiSettings, resolveAiSettings, type AiSettings } from './settings.js';
 
 type Guard = (request: FastifyRequest, reply: FastifyReply) => Promise<unknown> | void;
-export type AiRouteOptions = { provider?: AiProvider; requireAdmin?: Guard };
+export type AiSettingsStore = {
+  get(): Promise<AiSettings | null>;
+  save(settings: AiSettings): Promise<AiSettings>;
+  reset(): Promise<void>;
+};
+export type AiRouteOptions = { provider?: AiProvider; requireAdmin?: Guard; settingsStore?: AiSettingsStore };
 
 async function validateChatImages(request: ChatRequest): Promise<ChatRequest> {
   let imageBytes = 0;
@@ -40,17 +46,31 @@ function fail(reply: FastifyReply, error: unknown): FastifyReply {
   return reply.code(safe.status).send({ error: { code: safe.code, message: safe.message } });
 }
 export async function registerAiRoutes(app: FastifyInstance, options: AiRouteOptions = {}): Promise<void> {
+  let fallbackSettings: AiSettings | null = null;
+  const settingsStore: AiSettingsStore = options.settingsStore ?? {
+    get: async () => fallbackSettings ? structuredClone(fallbackSettings) : null,
+    save: async settings => {
+      fallbackSettings = { ...structuredClone(settings), updatedAt: settings.updatedAt ?? new Date().toISOString() };
+      return structuredClone(fallbackSettings);
+    },
+    reset: async () => { fallbackSettings = null; },
+  };
+
   app.post('/v1/chat', { bodyLimit: 12 * 1024 * 1024 }, async (request, reply) => {
     const parsed = chatRequestSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ error: { code: 'VALIDATION', message: 'Permintaan chat tidak valid, terlalu panjang, atau berisi pilihan model yang tidak diizinkan.' } });
     let input: ChatRequest;
-    try { input = await validateChatImages(parsed.data); }
-    catch (error) { return fail(reply, error); }
+    let storedSettings: AiSettings | null = null;
+    try {
+      input = await validateChatImages(parsed.data);
+      storedSettings = await settingsStore.get();
+    } catch (error) { return fail(reply, error); }
     const abort = new AbortController();
     request.raw.once('aborted', () => abort.abort());
     reply.raw.once('close', () => { if (!reply.raw.writableEnded) abort.abort(); });
     const frames = orchestrate(input, {
       provider: options.provider,
+      settings: storedSettings ? resolveAiSettings(storedSettings) : undefined,
       signal: abort.signal,
       onDiagnostic: record => app.log.info({ event: 'ai_request', ...record }),
     });
@@ -85,6 +105,49 @@ export async function registerAiRoutes(app: FastifyInstance, options: AiRouteOpt
 
   const requireAdmin: Guard = options.requireAdmin ?? (async (_request, reply) => {
     reply.code(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Login administrator diperlukan.' } });
+  });
+
+  app.get('/v1/admin/ai/settings', {
+    preHandler: requireAdmin,
+  }, async () => {
+    const stored = await settingsStore.get();
+    return {
+      settings: resolveAiSettings(stored),
+      isCustomized: stored !== null,
+      defaults: defaultAiSettings(),
+    };
+  });
+
+  app.patch('/v1/admin/ai/settings', {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const parsed = aiSettingsUpdateSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({
+        error: {
+          code: 'VALIDATION',
+          message: 'Pengaturan model AET AI tidak valid. Periksa format ID model dan opsi fitur.',
+        },
+      });
+    }
+    const saved = await settingsStore.save({
+      ...parsed.data,
+      updatedAt: new Date().toISOString(),
+    });
+    return {
+      settings: resolveAiSettings(saved),
+      isCustomized: true,
+    };
+  });
+
+  app.delete('/v1/admin/ai/settings', {
+    preHandler: requireAdmin,
+  }, async () => {
+    await settingsStore.reset();
+    return {
+      settings: defaultAiSettings(),
+      isCustomized: false,
+    };
   });
 
   app.post('/v1/admin/ai/models/reload', {

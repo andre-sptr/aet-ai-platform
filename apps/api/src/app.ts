@@ -79,6 +79,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     else if (path === '/v1/uploads' || path === '/v1/attachments/extract') limiter.take(`files:${request.ip}`, 10, 60_000);
     else if (path === '/v1/admin/ai/model-test') limiter.take(`model-test:${request.ip}`, 5, 60_000);
     else if (path === '/v1/admin/ai/models/reload') limiter.take(`model-reload:${request.ip}`, 15, 60_000);
+    else if (path === '/v1/admin/ai/settings' && request.method !== 'GET') limiter.take(`ai-settings:${request.ip}`, 20, 60_000);
     else limiter.take(`api:${request.ip}`, 240, 60_000);
   });
 
@@ -179,7 +180,17 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     return { url: await storage.put(request.body, image.mimeType, image.extension) };
   });
 
-  await registerAiRoutes(app, { provider: options.aiProvider, requireAdmin });
+  await registerAiRoutes(app, {
+    provider: options.aiProvider,
+    requireAdmin,
+    settingsStore: repository.getAiSettings && repository.saveAiSettings && repository.resetAiSettings
+      ? {
+          get: () => repository.getAiSettings!(),
+          save: settings => repository.saveAiSettings!(settings),
+          reset: () => repository.resetAiSettings!(),
+        }
+      : undefined,
+  });
   return app;
 }
 
