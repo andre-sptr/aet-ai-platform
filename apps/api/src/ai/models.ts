@@ -17,4 +17,5 @@ export const MODEL_CATALOG: readonly ModelSpec[] = [
   { id: 'gpt-5-mini', outputTokenField: 'max_completion_tokens', strengths: ['coding', 'math', 'research', 'general'], speed: 'deep', vision: false, maxContextCharacters: 96_000 },
 ];
 export const SUMOPOD_ENDPOINT = 'https://ai.sumopod.com/v1/chat/completions';
+export const SUMOPOD_MODELS_ENDPOINT = 'https://ai.sumopod.com/v1/models';
 export const MODEL_AVAILABILITY_NOTE = 'Model IDs are initial candidates from the supplied source. Current account support has not been verified. Native tools, structured-output and reasoning extensions remain disabled until confirmed in this configuration.';

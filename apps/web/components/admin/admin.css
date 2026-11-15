@@ -4,3 +4,2344 @@
 @media(prefers-reduced-motion:reduce){.admin-summary-card,.admin-field input,.admin-field textarea{transition:none}.aet-admin .animate-spin,.admin-dialog .animate-spin,.admin-login-shell .animate-spin{animation:none}}
 
 .admin-image-input>.admin-image-preview{width:78px;min-width:78px;height:78px;aspect-ratio:1;border-radius:8px;object-fit:cover;flex:none;overflow:hidden;margin-top:6px}.admin-image-input>.admin-image-preview.image-fallback{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#edf2f9;color:#8ea3bf}.admin-image-input>.admin-image-preview.image-fallback>svg{width:22px;height:22px}.admin-image-input>.admin-image-preview.image-fallback>span{font-size:8px}@media(max-width:767px){.admin-image-input>.admin-image-preview{width:52px;min-width:52px;height:52px}.admin-image-input>.admin-image-preview.image-fallback>span{display:none}}
+
+
+/* Admin shell & Dashboard UI refinement */
+.aet-admin {
+  display: block;
+  min-height: 100dvh;
+  background: #f4f7fc;
+  color: #0c2142;
+}
+
+.aet-admin .admin-rail {
+  display: none;
+}
+
+.aet-admin .admin-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  padding: 0.75rem 1rem;
+  background-color: #0c2142;
+  background-image: radial-gradient(ellipse at 100% 0%, #17447a 0%, transparent 65%);
+  color: #ffffff;
+  border-bottom: 1px solid rgba(173, 196, 230, 0.16);
+}
+
+.aet-admin .admin-mobile-header .admin-wordmark {
+  display: inline-block;
+  padding: 0.25rem 0;
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.aet-admin .admin-mobile-header .admin-wordmark > span {
+  color: #4592ff;
+}
+
+.aet-admin .admin-mobile-header .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(173, 196, 230, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+
+.aet-admin .admin-mobile-header .icon-button:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(173, 196, 230, 0.42);
+}
+
+dialog.admin-dialog:modal {
+  overscroll-behavior: contain;
+}
+
+dialog.admin-dialog::backdrop {
+  background: rgba(11, 18, 36, 0.56);
+  backdrop-filter: blur(2px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+dialog.admin-dialog.admin-nav-dialog[open] {
+  margin: 0 auto 0 0;
+  width: min(86vw, 310px);
+  max-width: min(86vw, 310px);
+  height: 100dvh;
+  max-height: 100dvh;
+  padding: 1.25rem 1rem;
+  border: 0;
+  border-right: 1px solid rgba(173, 196, 230, 0.18);
+  border-radius: 0;
+  background-color: #0c2142;
+  background-image: radial-gradient(ellipse at 100% 10%, #17447a 0%, transparent 58%);
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+dialog.admin-dialog.admin-nav-dialog .admin-dialog-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0 0.25rem 0.85rem;
+  border-bottom: 1px solid rgba(173, 196, 230, 0.18);
+}
+
+dialog.admin-dialog.admin-nav-dialog .admin-dialog-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+dialog.admin-dialog.admin-nav-dialog .admin-dialog-heading .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.625rem;
+  border: 1px solid rgba(173, 196, 230, 0.24);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.aet-admin .admin-rail .admin-wordmark {
+  display: block;
+  margin: 0;
+  padding: 0.25rem 0.75rem 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 0.625rem;
+}
+
+.aet-admin .admin-rail .admin-wordmark > span {
+  color: #4592ff;
+}
+
+.aet-admin .admin-rail .admin-wordmark > small {
+  display: block;
+  margin-top: 0.45rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  color: #adbed7;
+}
+
+.aet-admin .admin-rail .admin-navigation,
+dialog.admin-dialog.admin-nav-dialog .admin-navigation {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 0;
+}
+
+.aet-admin .admin-rail .admin-nav-group,
+dialog.admin-dialog.admin-nav-dialog .admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.aet-admin .admin-rail .admin-rail-label,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-label {
+  margin: 0;
+  padding: 0 0.75rem;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #adc4e6;
+}
+
+.aet-admin .admin-rail .admin-nav-list,
+dialog.admin-dialog.admin-nav-dialog .admin-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.aet-admin .admin-rail .admin-navigation a,
+dialog.admin-dialog.admin-nav-dialog .admin-navigation a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem 0.625rem 1rem;
+  border-radius: 0.625rem;
+  border: 0;
+  background: transparent;
+  color: #dbe7f7;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-rail .admin-navigation a:hover,
+dialog.admin-dialog.admin-nav-dialog .admin-navigation a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.aet-admin .admin-rail .admin-navigation a[aria-current="page"],
+dialog.admin-dialog.admin-nav-dialog .admin-navigation a[aria-current="page"] {
+  background: #1c4788;
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.28);
+}
+
+.aet-admin .admin-rail .admin-navigation a[aria-current="page"]::before,
+dialog.admin-dialog.admin-nav-dialog .admin-navigation a[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  left: 0.3rem;
+  top: 0.55rem;
+  bottom: 0.55rem;
+  width: 3px;
+  border-radius: 999px;
+  background: #79b2ff;
+}
+
+.aet-admin .admin-rail .admin-rail-actions,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(173, 196, 230, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.aet-admin .admin-rail .admin-rail-actions a,
+.aet-admin .admin-rail .admin-rail-actions button,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions a,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: #dbe7f7;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-rail .admin-rail-actions a:hover,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions a:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.aet-admin .admin-rail .admin-rail-actions .admin-logout-button,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions .admin-logout-button {
+  color: #fecdd3;
+}
+
+.aet-admin .admin-rail .admin-rail-actions .admin-logout-button:hover:not(:disabled),
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions .admin-logout-button:hover:not(:disabled) {
+  background: rgba(244, 63, 94, 0.18);
+  color: #ffffff;
+}
+
+.aet-admin .admin-rail .admin-rail-actions .admin-logout-button:disabled,
+dialog.admin-dialog.admin-nav-dialog .admin-rail-actions .admin-logout-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.aet-admin .admin-rail :is(a, button):focus-visible,
+.aet-admin .admin-mobile-header :is(a, button):focus-visible,
+dialog.admin-dialog.admin-nav-dialog :is(a, button):focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-body {
+  min-width: 0;
+  width: 100%;
+  margin-left: 0;
+  display: flex;
+  flex-direction: column;
+  background: #f4f7fc;
+}
+
+.aet-admin .admin-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  height: auto;
+  min-height: 54px;
+  padding: 0.65rem clamp(1rem, 2.5vw, 2rem);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.aet-admin .admin-topbar-route {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 0;
+  color: #52637a;
+}
+
+.aet-admin .admin-topbar-route span {
+  white-space: nowrap;
+}
+
+.aet-admin .admin-topbar-route strong {
+  color: #0c2142;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aet-admin .admin-topbar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-topbar-role {
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #0044ab;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.aet-admin .admin-topbar-name {
+  color: #0c2142;
+  font-weight: 600;
+}
+
+.aet-admin .admin-avatar {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #0c2142;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.aet-admin .admin-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: clamp(1.25rem, 2.5vw, 2rem);
+}
+
+.aet-admin .admin-page-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.aet-admin .admin-page-heading > div {
+  min-width: 0;
+  max-width: 34rem;
+}
+
+.aet-admin .admin-eyebrow {
+  margin: 0;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0056d2;
+}
+
+.aet-admin .admin-page-heading h1 {
+  margin: 0.25rem 0 0;
+  font-size: clamp(1.5rem, 1.2rem + 1.15vw, 2rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+  color: #0c2142;
+}
+
+.aet-admin .admin-page-heading p:not(.admin-eyebrow) {
+  margin: 0.5rem 0 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.aet-admin .admin-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.aet-admin .admin-page-heading .button,
+.aet-admin .admin-page-actions .button {
+  white-space: nowrap;
+  font-size: 0.875rem;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.aet-admin .admin-feedback-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.aet-admin .admin-feedback-error button {
+  min-height: 36px;
+  padding: 0.35rem 0.8rem;
+  border-radius: 0.5rem;
+  border: 1px solid rgba(153, 27, 27, 0.28);
+  background: #ffffff;
+  color: #991b1b;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.aet-admin .admin-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 0;
+}
+
+.aet-admin .admin-summary-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  border: 1px solid #dce5f2;
+  box-shadow: 0 1px 2px rgba(12, 33, 66, 0.04);
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.aet-admin .admin-summary-card:hover {
+  border-color: #93b8f2;
+  box-shadow: 0 10px 24px rgba(12, 33, 66, 0.07);
+  transform: translateY(-2px);
+}
+
+.aet-admin .admin-summary-card:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  color: #475569;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.aet-admin .admin-summary-icon {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #eef4ff;
+  color: #0056d2;
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-summary-card > strong {
+  display: block;
+  margin: 0.1rem 0 0;
+  padding: 0;
+  font-size: clamp(1.85rem, 1.5rem + 1vw, 2.35rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: #0c2142;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-summary-card > strong.admin-summary-unavailable {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #991b1b;
+}
+
+.aet-admin .admin-summary-meta {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: #52637a;
+  min-height: 1.2rem;
+}
+
+.aet-admin .admin-summary-link {
+  margin-top: auto;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef2f8;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #0056d2;
+}
+
+.aet-admin .admin-summary-link > svg {
+  display: block;
+}
+
+.aet-admin .admin-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+  align-items: start;
+}
+
+.aet-admin .admin-dashboard-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.aet-admin .admin-panel {
+  min-width: 0;
+  padding: 1.35rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  border: 1px solid #dce5f2;
+  box-shadow: 0 1px 2px rgba(12, 33, 66, 0.04);
+}
+
+.aet-admin .admin-panel h2 {
+  margin: 0;
+  font-size: 1.0625rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0c2142;
+}
+
+.aet-admin .admin-panel-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.aet-admin .admin-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 36px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0056d2;
+  text-decoration: none;
+}
+
+.aet-admin .admin-inline-link:hover {
+  text-decoration: underline;
+}
+
+.aet-admin .admin-inline-link:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+  border-radius: 0.35rem;
+}
+
+.aet-admin .admin-recent-skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.aet-admin .admin-skeleton {
+  display: block;
+  border-radius: 0.5rem;
+  background: linear-gradient(90deg, #e8eef7 25%, #f4f7fc 50%, #e8eef7 75%);
+  background-size: 200% 100%;
+  animation: adminShimmer 1.3s ease-in-out infinite;
+}
+
+.aet-admin .admin-skeleton-count {
+  width: 4.5rem;
+  height: 2.2rem;
+}
+
+.aet-admin .admin-skeleton-line {
+  width: 9rem;
+  height: 0.9rem;
+}
+
+.aet-admin .admin-skeleton-row {
+  width: 100%;
+  height: 54px;
+  border-radius: 0.75rem;
+}
+
+@keyframes adminShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.aet-admin .admin-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.aet-admin .admin-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.aet-admin .admin-recent-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  min-height: 56px;
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e7edf6;
+  background: #fafcff;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.aet-admin .admin-recent-item:hover {
+  border-color: #93b8f2;
+  background: #f2f7ff;
+}
+
+.aet-admin .admin-recent-item:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-recent-info {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.aet-admin .admin-recent-title {
+  font-size: 0.925rem;
+  font-weight: 600;
+  color: #0c2142;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.aet-admin .admin-recent-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.65rem;
+  font-size: 0.8rem;
+  color: #52637a;
+}
+
+.aet-admin .admin-recent-badges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-recent-arrow {
+  color: #52637a;
+}
+
+.aet-admin .admin-state-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.aet-admin .admin-state-pill.is-published {
+  background: #e8f7ee;
+  color: #166534;
+}
+
+.aet-admin .admin-state-pill.is-draft {
+  background: #eef2f7;
+  color: #334155;
+}
+
+.aet-admin .admin-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border-radius: 0.85rem;
+  background: #f8fafd;
+  border: 1px dashed #cbd7e8;
+  color: #475569;
+}
+
+.aet-admin .admin-empty-state p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.aet-admin .admin-checklist {
+  list-style: none;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.aet-admin .admin-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  font-size: 0.89rem;
+  line-height: 1.5;
+  color: #334155;
+}
+
+.aet-admin .admin-checklist svg {
+  color: #0056d2;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.aet-admin .admin-ai-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 1.35rem;
+  border-radius: 1rem;
+  background-color: #0c2142;
+  background-image: radial-gradient(ellipse at 100% 0%, #17447a 0%, transparent 60%);
+  color: #ffffff;
+  box-shadow: 0 12px 28px rgba(12, 33, 66, 0.14);
+}
+
+.aet-admin .admin-ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  align-self: flex-start;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(69, 146, 255, 0.2);
+  border: 1px solid rgba(121, 178, 255, 0.35);
+  color: #dbeafe;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.aet-admin .admin-ai-card h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.aet-admin .admin-ai-card p {
+  margin: 0;
+  font-size: 0.89rem;
+  line-height: 1.55;
+  color: #cbd8ec;
+}
+
+.aet-admin .admin-ai-cta {
+  margin-top: 0.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0.55rem 1rem;
+  border-radius: 0.625rem;
+  background: #ffffff;
+  color: #0c2142;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 140ms ease, transform 140ms ease;
+}
+
+.aet-admin .admin-ai-cta:hover {
+  background: #e2ecff;
+  transform: translateY(-1px);
+}
+
+.aet-admin .admin-ai-cta:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+@media (min-width: 960px) {
+  .aet-admin {
+    display: grid;
+    grid-template-columns: 256px minmax(0, 1fr);
+  }
+
+  .aet-admin .admin-rail {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    inset: auto;
+    top: 0;
+    width: 100%;
+    height: 100dvh;
+    z-index: 20;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 1.5rem 1rem 4.25rem;
+    gap: 1.35rem;
+    background-color: #0c2142;
+    background-image: radial-gradient(ellipse at 100% 10%, #17447a 0%, transparent 58%);
+    color: #ffffff;
+    border-right: 1px solid rgba(173, 196, 230, 0.16);
+  }
+
+  .aet-admin .admin-mobile-header {
+    display: none;
+  }
+}
+
+@media (max-width: 1080px) {
+  .aet-admin .admin-dashboard-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 719px) {
+  .aet-admin .admin-summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .aet-admin .admin-topbar-role {
+    display: none;
+  }
+
+  .aet-admin .admin-recent-item {
+    flex-wrap: wrap;
+  }
+}
+
+/* Content manager & news refinement */
+.aet-admin .admin-static-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  padding: 0.9rem 1.1rem;
+  margin: 0 0 1.25rem;
+  border-radius: 0.85rem;
+  background: #eef4ff;
+  border: 1px solid #c5dafc;
+  color: #16325c;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+.aet-admin .admin-static-note svg {
+  color: #0056d2;
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.aet-admin .admin-feedback-banner,
+dialog.admin-dialog .admin-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  margin: 0 0 1.25rem;
+  border-radius: 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.aet-admin .admin-feedback-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  font-weight: 500;
+}
+
+.aet-admin .admin-feedback-content svg {
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-feedback-dismiss {
+  width: 34px;
+  height: 34px;
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+
+.aet-admin .admin-feedback-dismiss:hover {
+  background: rgba(12, 33, 66, 0.08);
+}
+
+.aet-admin .admin-collection {
+  background: #ffffff;
+  border: 1px solid #dce5f2;
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px rgba(12, 33, 66, 0.04);
+  overflow: hidden;
+}
+
+.aet-admin .admin-collection-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid #e6edf7;
+  background: #fcfdff;
+}
+
+.aet-admin .admin-toolbar-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.aet-admin .admin-collection-toolbar h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0c2142;
+  white-space: nowrap;
+}
+
+.aet-admin .admin-collection-toolbar h2 span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  margin-left: 0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #0044ab;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-toolbar-summary {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #52637a;
+}
+
+.aet-admin .admin-toolbar-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-left: auto;
+  max-width: 100%;
+}
+
+.aet-admin .admin-filter-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.2rem;
+  border-radius: 0.7rem;
+  background: #f1f5fb;
+  border: 1px solid #dce5f2;
+}
+
+.aet-admin .admin-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0.35rem 0.625rem;
+  border: 0;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.aet-admin .admin-filter-pill span {
+  font-size: 0.74rem;
+  color: #52637a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-filter-pill:hover {
+  color: #0c2142;
+}
+
+.aet-admin .admin-filter-pill[aria-pressed="true"] {
+  background: #ffffff;
+  color: #0c2142;
+  box-shadow: 0 1px 3px rgba(12, 33, 66, 0.1);
+}
+
+.aet-admin .admin-filter-pill[aria-pressed="true"] span {
+  color: #0056d2;
+  font-weight: 700;
+}
+
+.aet-admin .admin-search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  width: min(215px, 100%);
+}
+
+.aet-admin .admin-search-icon {
+  position: absolute;
+  left: 0.8rem;
+  color: #52637a;
+  pointer-events: none;
+}
+
+.aet-admin .admin-search-box input {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.5rem 0.85rem 0.5rem 2.35rem;
+  border: 1px solid #cbd7e8;
+  border-radius: 0.65rem;
+  background: #ffffff;
+  color: #0c2142;
+  font-size: max(1rem, 1em);
+  line-height: 1.4;
+}
+
+.aet-admin .admin-search-box input:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+  border-color: #0056d2;
+}
+
+.aet-admin .admin-loading {
+  padding: 3rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #475569;
+  font-size: 0.92rem;
+  font-weight: 500;
+}
+
+.aet-admin .admin-empty {
+  padding: 3.5rem 1.5rem;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.aet-admin .admin-empty h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-empty p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #52637a;
+  max-width: 26rem;
+  line-height: 1.55;
+}
+
+.aet-admin .admin-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.aet-admin .admin-empty-actions .button {
+  margin-top: 0;
+  min-height: 44px;
+}
+
+.aet-admin .admin-content-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.aet-admin .admin-content-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 1.25rem;
+  padding: 1.1rem 1.35rem;
+  border-bottom: 1px solid #e9eef7;
+  transition: background-color 140ms ease;
+}
+
+.aet-admin .admin-content-list > li:last-child {
+  border-bottom: 0;
+}
+
+.aet-admin .admin-content-list > li:hover {
+  background: #fafcff;
+}
+
+.aet-admin .admin-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.aet-admin .admin-row-thumb {
+  width: 64px;
+  height: 64px;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid #dce5f2;
+  background: #f4f7fc;
+}
+
+.aet-admin .admin-row-thumb.is-avatar {
+  border-radius: 999px;
+  object-position: center top;
+}
+
+.aet-admin .admin-row-thumb.is-avatar.image-fallback {
+  gap: 0.2rem;
+  font-size: 0.65rem;
+}
+
+.aet-admin .admin-row-thumb-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #47638c;
+  background: #eef4ff;
+}
+
+.aet-admin .admin-team-avatar-fallback {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid #bfd6f8;
+  background: linear-gradient(145deg, #eef4ff 0%, #dbeafe 100%);
+  color: #0c2142;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-event-date-tile {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #c9daf6;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: stretch;
+}
+
+.aet-admin .admin-event-date-tile > span {
+  width: 100%;
+  padding: 0.22rem 0.25rem;
+  background: #0c2142;
+  color: #dbeafe;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.aet-admin .admin-event-date-tile > strong {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: #0c2142;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-row-text {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.aet-admin .admin-row-text h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.35;
+  color: #0c2142;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-row-summary {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: #475569;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.aet-admin .admin-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.65rem;
+  margin-top: 0.15rem;
+}
+
+.aet-admin .admin-slug-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.4rem;
+  background: #f1f5fb;
+  border: 1px solid #e2e8f2;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.75rem;
+  color: #334155;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-row-detail {
+  font-size: 0.8rem;
+  color: #52637a;
+}
+
+.aet-admin .admin-event-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 0.45rem;
+  background: #f1f5fb;
+  border: 1px solid #e2e8f2;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #334155;
+  max-width: 100%;
+}
+
+.aet-admin .admin-event-chip svg {
+  color: #0056d2;
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-event-chip.is-location span {
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-schedule-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.58rem;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.aet-admin .admin-schedule-pill.is-upcoming {
+  background: #e8f1ff;
+  color: #0044ab;
+}
+
+.aet-admin .admin-schedule-pill.is-ongoing {
+  background: #e6f7f4;
+  color: #0f5d54;
+}
+
+.aet-admin .admin-schedule-pill.is-past {
+  background: #eef2f7;
+  color: #475569;
+}
+
+.aet-admin .admin-team-role {
+  margin: 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #0044ab;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-team-order {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5fb;
+  border: 1px solid #dce5f2;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #334155;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-social-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  border: 1px solid #c9daf6;
+  color: #0044ab;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-social-chip:hover {
+  background: #e0ecff;
+  border-color: #93b8f2;
+  color: #003585;
+}
+
+.aet-admin .admin-social-chip:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.22rem 0.58rem;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #334155;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.aet-admin .admin-status.is-published {
+  background: #e8f7ee;
+  color: #166534;
+}
+
+.aet-admin .admin-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.aet-admin .admin-row-actions .admin-text-button {
+  min-height: 40px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.6rem;
+  border: 1px solid #cbd7e8;
+  background: #ffffff;
+  color: #0c2142;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-row-actions .admin-text-button:hover:not(:disabled) {
+  background: #eef4ff;
+  border-color: #93b8f2;
+  color: #0044ab;
+}
+
+.aet-admin .admin-row-actions .icon-button {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid #dce5f2;
+  border-radius: 0.6rem;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-row-actions .icon-button:hover:not(:disabled) {
+  background: #eef4ff;
+  border-color: #93b8f2;
+  color: #0056d2;
+}
+
+.aet-admin .admin-row-actions .admin-delete-button {
+  color: #b91c1c;
+  border-color: #f3d0d4;
+}
+
+.aet-admin .admin-row-actions .admin-delete-button:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+dialog.admin-dialog:not(.admin-nav-dialog) {
+  padding: 0;
+  width: min(820px, calc(100% - 2rem));
+  max-height: calc(100dvh - 2rem);
+  border: 1px solid #dce5f2;
+  border-radius: 1.15rem;
+  background: #ffffff;
+  color: #0c2142;
+  box-shadow: 0 24px 64px rgba(12, 33, 66, 0.24);
+}
+
+dialog.admin-dialog:not(.admin-nav-dialog) .admin-dialog-heading {
+  padding: 1.15rem 1.5rem;
+  border-bottom: 1px solid #e6edf7;
+  background: #ffffff;
+}
+
+dialog.admin-dialog:not(.admin-nav-dialog) .admin-dialog-heading h2 {
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0c2142;
+}
+
+dialog.admin-dialog:not(.admin-nav-dialog) .admin-dialog-heading .icon-button {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 0.65rem;
+  background: #f1f5fb;
+  color: #334155;
+  cursor: pointer;
+}
+
+dialog.admin-dialog:not(.admin-nav-dialog) .admin-dialog-heading .icon-button:hover {
+  background: #e2ebf8;
+  color: #0c2142;
+}
+
+dialog.admin-dialog .admin-editor {
+  padding: 1.5rem;
+}
+
+dialog.admin-dialog .admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem 1.15rem;
+}
+
+dialog.admin-dialog .admin-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+dialog.admin-dialog .admin-field > span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+dialog.admin-dialog .admin-field :is(input, textarea) {
+  border: 1px solid #cbd7e8;
+  border-radius: 0.65rem;
+  padding: 0.72rem 0.9rem;
+  background: #ffffff;
+  color: #0c2142;
+  font-size: max(1rem, 1em);
+  line-height: 1.5;
+  width: 100%;
+  min-width: 0;
+}
+
+dialog.admin-dialog .admin-field textarea {
+  resize: vertical;
+  min-height: 112px;
+}
+
+dialog.admin-dialog .admin-field :is(input, textarea):focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+  border-color: #0056d2;
+}
+
+dialog.admin-dialog .admin-field :is(input, textarea):user-invalid {
+  border-color: #c81e1e;
+  background-color: #fff6f6;
+}
+
+dialog.admin-dialog .admin-field:has(:user-invalid) > span:first-child {
+  color: #991b1b;
+}
+
+dialog.admin-dialog .admin-field small {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #52637a;
+}
+
+dialog.admin-dialog .admin-field-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+dialog.admin-dialog .admin-field textarea.admin-code-input {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  line-height: 1.55;
+}
+
+dialog.admin-dialog .admin-field small.admin-field-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+dialog.admin-dialog .admin-field small.admin-field-valid {
+  color: #166534;
+  font-weight: 600;
+}
+
+dialog.admin-dialog .admin-json-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+dialog.admin-dialog .admin-json-tool {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.55rem;
+  border: 1px solid #cbd7e8;
+  background: #f8fafd;
+  color: #0c2142;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+dialog.admin-dialog .admin-json-tool:hover:not(:disabled) {
+  background: #eef4ff;
+  border-color: #93b8f2;
+  color: #0044ab;
+}
+
+dialog.admin-dialog .admin-json-tool:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+dialog.admin-dialog .admin-image-input {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem;
+  border-radius: 0.85rem;
+  border: 1px dashed #cbd7e8;
+  background: #f8fafd;
+}
+
+dialog.admin-dialog .admin-image-input > .admin-image-preview {
+  width: 84px;
+  min-width: 84px;
+  height: 84px;
+  min-height: 0;
+  aspect-ratio: 1;
+  border-radius: 0.75rem;
+  border: 1px solid #dce5f2;
+  object-fit: cover;
+  flex-shrink: 0;
+  margin-top: 0;
+  background: #eef4ff;
+  color: #47638c;
+  align-self: flex-start;
+}
+
+dialog.admin-dialog .admin-image-input > .admin-image-preview.is-avatar {
+  border-radius: 999px;
+  object-position: center top;
+}
+
+dialog.admin-dialog .admin-image-input > .admin-image-preview.image-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+dialog.admin-dialog .admin-image-input > .admin-image-preview.image-fallback > svg {
+  width: 22px;
+  height: 22px;
+}
+
+dialog.admin-dialog .admin-image-input > .admin-image-preview.image-fallback > span {
+  font-size: 0.625rem;
+  letter-spacing: 0.08em;
+}
+
+dialog.admin-dialog .admin-upload-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 40px;
+  padding: 0.45rem 0.9rem;
+  margin-top: 0.65rem;
+  border-radius: 0.6rem;
+  border: 1px solid #bfd6f8;
+  background: #eef4ff;
+  color: #0044ab;
+  font-size: 0.84rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+dialog.admin-dialog .admin-upload-label:hover {
+  background: #e0ecff;
+  border-color: #93b8f2;
+}
+
+dialog.admin-dialog .admin-upload-label:focus-within {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+dialog.admin-dialog .admin-publish-field {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 52px;
+  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  border: 1px solid #dce5f2;
+  background: #f8fafd;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+dialog.admin-dialog .admin-publish-field:has(input:checked) {
+  background: #eef4ff;
+  border-color: #93b8f2;
+}
+
+dialog.admin-dialog .admin-publish-field > input {
+  width: 20px;
+  height: 20px;
+  accent-color: #0056d2;
+  flex-shrink: 0;
+}
+
+dialog.admin-dialog .admin-publish-field strong {
+  font-size: 0.9rem;
+  color: #0c2142;
+}
+
+dialog.admin-dialog .admin-publish-field small {
+  font-size: 0.82rem;
+  color: #52637a;
+}
+
+dialog.admin-dialog .admin-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 1.25rem;
+  margin-top: 1.5rem;
+  border-top: 1px solid #e6edf7;
+}
+
+dialog.admin-dialog .admin-form-actions .button {
+  min-height: 44px;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+dialog.admin-dialog .admin-confirm-copy {
+  padding: 1.35rem 1.5rem 0;
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: #334155;
+}
+
+dialog.admin-dialog > .admin-form-actions {
+  padding: 1.15rem 1.5rem 1.35rem;
+  margin-top: 1.25rem;
+}
+
+@media (max-width: 767px) {
+  .aet-admin .admin-collection-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+
+  .aet-admin .admin-toolbar-controls {
+    flex-direction: column;
+    align-items: stretch;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .aet-admin .admin-search-box {
+    width: 100%;
+  }
+
+  .aet-admin .admin-filter-group {
+    flex-wrap: wrap;
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .aet-admin .admin-filter-pill {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  .aet-admin .admin-content-list > li {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem;
+  }
+
+  .aet-admin .admin-row-actions {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 0.5rem;
+    border-top: 1px solid #f1f5fb;
+  }
+
+  .aet-admin .admin-row-actions .admin-text-button {
+    margin-right: auto;
+    min-height: 44px;
+  }
+
+  .aet-admin .admin-row-actions .icon-button {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  dialog.admin-dialog:not(.admin-nav-dialog) .admin-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  dialog.admin-dialog:not(.admin-nav-dialog) .admin-image-input {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  dialog.admin-dialog:not(.admin-nav-dialog) .admin-image-input > div {
+    width: 100%;
+  }
+
+  dialog.admin-dialog:not(.admin-nav-dialog) .admin-editor {
+    padding: 1rem;
+  }
+
+  dialog.admin-dialog:not(.admin-nav-dialog) .admin-dialog-heading {
+    padding: 1rem;
+  }
+}
+
+/* AI Model Tester Workspace */
+.aet-admin .admin-ai-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.9fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.aet-admin .admin-model-panel {
+  max-width: none;
+  padding: 0;
+  background: #ffffff;
+  border: 1px solid #dce5f2;
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px -22px rgba(12, 33, 66, 0.25);
+  overflow: hidden;
+}
+
+.aet-admin .admin-model-catalog-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem 1rem;
+  padding: 1.25rem 1.5rem;
+  background: #f8fafd;
+  border-bottom: 1px solid #e6edf7;
+}
+
+.aet-admin .admin-model-catalog-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.aet-admin .admin-model-catalog-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.65rem;
+}
+
+.aet-admin .admin-model-catalog-title h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-model-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-model-source.is-cached {
+  background: #e8f1ff;
+  color: #0044ab;
+}
+
+.aet-admin .admin-model-catalog-meta {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: #52637a;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-reload-button {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.aet-admin .admin-model-feedback {
+  margin: 1.25rem 1.5rem 0;
+}
+
+.aet-admin .admin-model-form {
+  display: grid;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+.aet-admin .admin-model-panel .admin-field {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.aet-admin .admin-field-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.4rem 0.75rem;
+}
+
+.aet-admin .admin-model-panel .admin-field label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.aet-admin .admin-char-count {
+  font-size: 0.78rem;
+  color: #52637a;
+  font-variant-numeric: tabular-nums;
+}
+
+.aet-admin .admin-select-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.aet-admin .admin-select-wrap select {
+  width: 100%;
+  min-height: 46px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid #cbd7e8;
+  border-radius: 0.65rem;
+  padding: 0.7rem 2.65rem 0.7rem 0.9rem;
+  background: #ffffff;
+  color: #0c2142;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.aet-admin .admin-select-wrap select:disabled {
+  background: #f1f5fb;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.aet-admin .admin-select-wrap select:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+  border-color: #0056d2;
+}
+
+.aet-admin .admin-select-icon {
+  position: absolute;
+  right: 0.9rem;
+  color: #475569;
+  pointer-events: none;
+}
+
+.aet-admin .admin-model-panel .admin-field textarea {
+  border: 1px solid #cbd7e8;
+  border-radius: 0.65rem;
+  padding: 0.78rem 0.95rem;
+  background: #ffffff;
+  color: #0c2142;
+  font-size: max(1rem, 1em);
+  line-height: 1.55;
+  width: 100%;
+  min-width: 0;
+  min-height: 136px;
+  resize: vertical;
+}
+
+.aet-admin .admin-model-panel .admin-field textarea:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+  border-color: #0056d2;
+}
+
+.aet-admin .admin-model-panel .admin-field :is(select, textarea):user-invalid {
+  border-color: #c81e1e;
+  background-color: #fff6f6;
+}
+
+.aet-admin .admin-model-panel .admin-field:has(:user-invalid) label {
+  color: #991b1b;
+}
+
+.aet-admin .admin-model-panel .admin-field small {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #52637a;
+}
+
+.aet-admin .admin-model-panel .admin-field small.admin-field-error {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.aet-admin .admin-model-callout {
+  margin: 0;
+}
+
+.aet-admin .admin-model-form-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  padding-top: 0.35rem;
+}
+
+.aet-admin .admin-model-form-footer .button {
+  min-height: 44px;
+  min-width: 120px;
+  font-size: 0.92rem;
+  cursor: pointer;
+}
+
+.aet-admin .admin-model-selection-note {
+  font-size: 0.84rem;
+  color: #475569;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-model-selection-note code {
+  padding: 0.15rem 0.45rem;
+  border-radius: 0.4rem;
+  background: #f1f5fb;
+  border: 1px solid #e2e8f2;
+  color: #0c2142;
+  font-size: 0.8rem;
+}
+
+.aet-admin .admin-ai-sidebar {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.aet-admin .admin-model-result,
+.aet-admin .admin-model-meta-card {
+  margin: 0;
+  padding: 1.35rem 1.5rem;
+  background: #ffffff;
+  border: 1px solid #dce5f2;
+  border-radius: 1rem;
+  box-shadow: 0 12px 28px -22px rgba(12, 33, 66, 0.25);
+}
+
+.aet-admin .admin-model-result-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.aet-admin .admin-model-result-head h2,
+.aet-admin .admin-model-meta-card h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0c2142;
+}
+
+.aet-admin .admin-status.is-error {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.aet-admin .admin-model-result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.aet-admin .admin-copy-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 32px;
+  padding: 0.25rem 0.65rem;
+  margin-left: auto;
+  border-radius: 0.5rem;
+  border: 1px solid #cbd7e8;
+  background: #f8fafd;
+  color: #0c2142;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.aet-admin .admin-copy-button:hover {
+  background: #eef4ff;
+  border-color: #93b8f2;
+  color: #0044ab;
+}
+
+.aet-admin .admin-copy-button:focus-visible {
+  outline: 2px solid #0056d2;
+  outline-offset: 2px;
+}
+
+.aet-admin .admin-model-result pre {
+  margin: 0;
+  padding: 1.05rem 1.15rem;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f2;
+  background: #f4f7fc;
+  color: #0c2142;
+  font-size: 0.88rem;
+  line-height: 1.7;
+  max-height: 380px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-model-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.65rem;
+  padding: 1.65rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px dashed #cbd7e8;
+  background: #f8fafd;
+  color: #475569;
+}
+
+.aet-admin .admin-model-empty svg {
+  color: #0056d2;
+}
+
+.aet-admin .admin-model-empty p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.6;
+  max-width: 26rem;
+}
+
+.aet-admin .admin-model-spec-list {
+  margin: 0.9rem 0 0;
+  display: grid;
+  gap: 0.8rem;
+}
+
+.aet-admin .admin-model-spec-list > div {
+  display: grid;
+  gap: 0.2rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eef2f7;
+}
+
+.aet-admin .admin-model-spec-list > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.aet-admin .admin-model-spec-list dt {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #52637a;
+}
+
+.aet-admin .admin-model-spec-list dd {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #0c2142;
+  overflow-wrap: anywhere;
+}
+
+.aet-admin .admin-model-spec-list dd code {
+  font-size: 0.78rem;
+  color: #0044ab;
+}
+
+@media (max-width: 1080px) {
+  .aet-admin .admin-ai-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .aet-admin .admin-model-catalog-bar,
+  .aet-admin .admin-model-form,
+  .aet-admin .admin-model-result,
+  .aet-admin .admin-model-meta-card {
+    padding: 1.1rem;
+  }
+
+  .aet-admin .admin-model-feedback {
+    margin: 1rem 1.1rem 0;
+  }
+
+  .aet-admin .admin-reload-button,
+  .aet-admin .admin-model-form-footer .button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aet-admin *,
+  dialog.admin-dialog * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

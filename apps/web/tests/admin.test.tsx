@@ -68,22 +68,37 @@ test("failed login displays the provider-safe error without granting a session",
   assert.equal(authenticated, false);
 });
 
-test("manual model panel never sends a request before explicit Test", async () => {
+test("manual model panel never sends a request before explicit reload or test and caches reloaded IDs", async () => {
   const requests: { path: string; body: unknown }[] = [];
   globalThis.fetch = async (input, options) => {
-    requests.push({ path: String(input), body: JSON.parse(String(options?.body)) });
+    const path = String(input);
+    const body = JSON.parse(String(options?.body ?? "{}"));
+    requests.push({ path, body });
+    if (path.endsWith("/v1/admin/ai/models/reload")) {
+      return Response.json({
+        models: ["operator/model-1", "gpt-4o-mini"],
+        fetchedAt: "2026-11-15T07:00:00.000Z",
+        source: "sumopod",
+      });
+    }
     return Response.json({ response: "Respons model uji", elapsedMs: 350 });
   };
   const view = render(<ModelTestPanel />);
   assert.equal(requests.length, 0);
+  fireEvent.click(view.getByRole("button", { name: "Reload model" }));
+  await waitFor(() => assert.equal(requests.length, 1));
+  assert.match(requests[0].path, /\/v1\/admin\/ai\/models\/reload$/);
+  const cachedRaw = dom.window.localStorage.getItem("aet-ai:admin:sumopod-models:v1");
+  assert.ok(cachedRaw);
+  assert.deepEqual(JSON.parse(cachedRaw).models, ["operator/model-1", "gpt-4o-mini"]);
   fireEvent.change(view.getByLabelText("Model ID"), { target: { value: "operator/model-1" } });
   fireEvent.change(view.getByLabelText("Prompt singkat"), { target: { value: "Jelaskan satu konsep." } });
-  assert.equal(requests.length, 0);
+  assert.equal(requests.length, 1);
   fireEvent.submit(view.getByRole("form", { name: "Uji model AI" }));
   await waitFor(() => assert.match(view.getByText("Respons model uji").textContent ?? "", /Respons model uji/));
-  assert.equal(requests.length, 1);
-  assert.match(requests[0].path, /\/v1\/admin\/ai\/model-test$/);
-  assert.deepEqual(requests[0].body, { modelId: "operator/model-1", prompt: "Jelaskan satu konsep." });
+  assert.equal(requests.length, 2);
+  assert.match(requests[1].path, /\/v1\/admin\/ai\/model-test$/);
+  assert.deepEqual(requests[1].body, { modelId: "operator/model-1", prompt: "Jelaskan satu konsep." });
 });
 
 test("CMS news form creates a validated draft and refreshes its collection", async () => {

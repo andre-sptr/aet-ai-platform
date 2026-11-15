@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createSumopodProvider, readProviderSse, type ProviderRequest } from '../src/ai/provider.js';
-import { MODEL_CATALOG, SUMOPOD_ENDPOINT } from '../src/ai/models.js';
+import { MODEL_CATALOG, SUMOPOD_ENDPOINT, SUMOPOD_MODELS_ENDPOINT } from '../src/ai/models.js';
 
 function byteStream(chunks: string[]) { return new ReadableStream<Uint8Array>({ start(controller) { chunks.forEach(chunk => controller.enqueue(new TextEncoder().encode(chunk))); controller.close(); } }); }
 const request: ProviderRequest = { model: MODEL_CATALOG[0]!, messages: [{ role: 'user', content: 'test' }], signal: new AbortController().signal, maxTokens: 100, effort: 'normal' };
@@ -43,4 +43,32 @@ test('provider completion enforces byte cap during reading and rejects malformed
     const malformed = createSumopodProvider({ apiKey: 'fixture', fetcher: async () => new Response(raw) });
     await assert.rejects(malformed.complete(request));
   }
+});
+
+test('provider listModels queries Sumopod models endpoint, deduplicates, sorts, and rejects invalid payloads', async () => {
+  const provider = createSumopodProvider({
+    apiKey: 'synthetic-key-not-a-secret',
+    fetcher: async (url, init) => {
+      assert.equal(url, SUMOPOD_MODELS_ENDPOINT);
+      assert.equal(init?.method, 'GET');
+      assert.equal((init?.headers as Record<string, string>).Authorization, 'Bearer synthetic-key-not-a-secret');
+      return new Response(JSON.stringify({
+        object: 'list',
+        data: [
+          { id: 'gpt-5-mini' },
+          { id: 'deepseek-chat' },
+          { id: 'gpt-5-mini' },
+          { id: 'invalid model with spaces' },
+        ],
+      }), { headers: { 'Content-Type': 'application/json' } });
+    },
+  });
+  const models = await provider.listModels!(new AbortController().signal);
+  assert.deepEqual(models, ['deepseek-chat', 'gpt-5-mini']);
+
+  const emptyProvider = createSumopodProvider({
+    apiKey: 'fixture',
+    fetcher: async () => new Response(JSON.stringify({ data: [] })),
+  });
+  await assert.rejects(emptyProvider.listModels!(new AbortController().signal), /kosong/);
 });

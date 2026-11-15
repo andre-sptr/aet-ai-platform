@@ -7,11 +7,22 @@ import type { AiProvider } from '../src/ai/provider.js';
 const chat = { persona: 'daily', effort: 'normal', messages: [{ role: 'user', content: 'Halo' }] };
 test('manual model panel is authenticated, explicit-only, flexible-ID and strictly validated', async () => {
   let calls = 0; const modelIds: string[] = [];
-  const provider: AiProvider = { async *stream() { yield 'ok'; }, async complete(request) { calls++; modelIds.push(request.model.id); return 'Manual test answer'; } };
+  const provider: AiProvider = {
+    async *stream() { yield 'ok'; },
+    async complete(request) { calls++; modelIds.push(request.model.id); return 'Manual test answer'; },
+    async listModels() { return ['gpt-4o-mini', 'operator-supported/model']; },
+  };
   const app = Fastify();
   await registerAiRoutes(app, { provider, requireAdmin: async (request, reply) => { if (request.headers.authorization !== 'synthetic-test-session') reply.code(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Login required' } }); } });
   try {
     await app.ready(); assert.equal(calls, 0);
+    const deniedReload = await app.inject({ method: 'POST', url: '/v1/admin/ai/models/reload', payload: {} });
+    assert.equal(deniedReload.statusCode, 401);
+    const reloaded = await app.inject({ method: 'POST', url: '/v1/admin/ai/models/reload', headers: { authorization: 'synthetic-test-session' }, payload: {} });
+    assert.equal(reloaded.statusCode, 200);
+    assert.deepEqual(reloaded.json().models, ['gpt-4o-mini', 'operator-supported/model']);
+    assert.equal(reloaded.json().source, 'sumopod');
+    assert.equal(typeof reloaded.json().fetchedAt, 'string');
     const denied = await app.inject({ method: 'POST', url: '/v1/admin/ai/model-test', payload: { modelId: 'operator-supported/model', prompt: 'Hi' } });
     assert.equal(denied.statusCode, 401); assert.equal(calls, 0);
     const invalid = await app.inject({ method: 'POST', url: '/v1/admin/ai/model-test', headers: { authorization: 'synthetic-test-session' }, payload: { modelId: 'operator-supported/model', prompt: 'Hi', apiKey: 'must-not-be-accepted' } });

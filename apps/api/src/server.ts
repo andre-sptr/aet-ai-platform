@@ -9,9 +9,10 @@ if (!env.production) {
     await repository.ping();
   } catch {
     await repository.close?.().catch(() => {});
-    const { createDevFallbackRepository } = await import('./dev-repository.js');
+    const { createDevFallbackRepository, seedDevFallbackAdmin } = await import('./dev-repository.js');
     repository = createDevFallbackRepository();
     console.warn('PostgreSQL tidak tersedia; memakai penyimpanan in-memory development (data/legacy-content.json).');
+    await seedDevFallbackAdmin(repository, { production: env.production });
   }
 }
 const app = await buildApp({ env, repository });

@@ -46,6 +46,9 @@ async function run() {
       if (request.model.id === 'operator/fail-fixture') throw new AiError('PROVIDER_REJECTED', 'Kesalahan model tiruan.', 502);
       return fixtureResponse;
     },
+    async listModels() {
+      return ['operator/browser-fixture', 'operator/fail-fixture'];
+    },
   };
   const safeMessage = (error: unknown) => (error instanceof Error ? error.message : String(error)).replaceAll(password, '[redacted]').replaceAll(username, '[redacted]').replaceAll(sessionSecret, '[redacted]');
   try {
@@ -209,17 +212,18 @@ async function run() {
     stage = 'manual mocked model test';
     await page.goto(`${origin}/admin/ai/`);
     assert.equal(providerCalls, 0);
-    await page.getByLabel('Model ID', { exact: true }).fill('operator/browser-fixture');
+    await write('POST', '/v1/admin/ai/models/reload', () => page!.getByRole('button', { name: 'Reload model', exact: true }).click());
+    await page.getByLabel('Model ID', { exact: true }).selectOption('operator/browser-fixture');
     await page.getByLabel('Prompt singkat', { exact: true }).fill('Prompt fixture browser.');
     assert.equal(providerCalls, 0);
     await write('POST', '/v1/admin/ai/model-test', () => page!.getByRole('button', { name: 'Test', exact: true }).click());
     await page.getByText(fixtureResponse, { exact: true }).waitFor();
     assert.equal(providerCalls, 1);
-    await page.getByLabel('Model ID', { exact: true }).fill('operator/fail-fixture');
+    await page.getByLabel('Model ID', { exact: true }).selectOption('operator/fail-fixture');
     await write('POST', '/v1/admin/ai/model-test', () => page!.getByRole('button', { name: 'Test', exact: true }).click(), 502);
     await page.getByRole('alert').filter({ hasText: 'Kesalahan model tiruan.' }).waitFor();
     assert.equal(providerCalls, 2);
-    checks.push('Manual model panel sends no automatic requests and displays explicit fixture response/error');
+    checks.push('Manual model panel reloads, caches, and tests dropdown models with explicit fixture responses');
 
     stage = 'desktop and mobile layout';
     await page.goto(`${origin}/admin/`);

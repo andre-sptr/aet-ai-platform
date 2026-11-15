@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { EventSchema, NewsSchema, TeamMemberSchema, type Event as AetEvent, type News, type TeamMember } from '@aet/contracts';
-import type { AdminIdentity } from './auth.js';
+import { hashPassword, type AdminIdentity } from './auth.js';
 import type { AdminRecord, ContentInput, ContentRecord, Repository, Resource } from './repository.js';
 
 function resolveSeedPath(): string | null {
@@ -114,4 +114,38 @@ export function createDevFallbackRepository(seedPath = resolveSeedPath()): Repos
       }
     },
   };
+}
+
+const devAdminUsernamePattern = /^[A-Za-z0-9._-]{3,100}$/;
+
+/**
+ * Seeds a disposable in-memory admin account strictly for non-production offline fallback.
+ * Never call in production; reads credentials only from environment variables.
+ */
+export async function seedDevFallbackAdmin(
+  repository: Pick<Repository, 'createAdmin'>,
+  options: {
+    production?: boolean;
+    env?: Record<string, string | undefined>;
+    warn?: (message: string) => void;
+  } = {},
+): Promise<boolean> {
+  const source = options.env ?? process.env;
+  if (options.production || source.NODE_ENV === 'production') return false;
+
+  const warn = options.warn ?? console.warn;
+  const username = source.DEV_ADMIN_USERNAME?.trim() ?? '';
+  const password = source.DEV_ADMIN_PASSWORD ?? '';
+  if (!username && !password) {
+    warn('Akun admin in-memory dev belum diatur; isi DEV_ADMIN_USERNAME dan DEV_ADMIN_PASSWORD di .env lokal untuk masuk /admin/.');
+    return false;
+  }
+  if (!devAdminUsernamePattern.test(username) || password.length < 12 || password.length > 256) {
+    warn('DEV_ADMIN_USERNAME atau DEV_ADMIN_PASSWORD tidak valid (username 3-100 karakter [A-Za-z0-9._-], password 12-256 karakter).');
+    return false;
+  }
+
+  await repository.createAdmin(username, await hashPassword(password));
+  warn('Akun admin in-memory development aktif untuk fallback lokal.');
+  return true;
 }

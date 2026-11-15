@@ -83,8 +83,32 @@ export async function registerAiRoutes(app: FastifyInstance, options: AiRouteOpt
     });
   });
 
+  const requireAdmin: Guard = options.requireAdmin ?? (async (_request, reply) => {
+    reply.code(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Login administrator diperlukan.' } });
+  });
+
+  app.post('/v1/admin/ai/models/reload', {
+    preHandler: requireAdmin,
+  }, async (request, reply) => {
+    const controller = new AbortController();
+    request.raw.once('aborted', () => controller.abort());
+    reply.raw.once('close', () => { if (!reply.raw.writableEnded) controller.abort(); });
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15_000)]);
+    try {
+      const provider = options.provider ?? createSumopodProvider();
+      if (!provider.listModels) {
+        throw new AiError('PROVIDER_UNSUPPORTED', 'Penyedia aktif belum mendukung muat ulang daftar model.', 501);
+      }
+      const models = await provider.listModels(signal);
+      return { models, fetchedAt: new Date().toISOString(), source: 'sumopod' as const };
+    } catch (error) {
+      const safe = safeAiError(error);
+      return reply.code(safe.status).send({ error: { code: safe.code, message: safe.message } });
+    } finally { controller.abort(); }
+  });
+
   app.post('/v1/admin/ai/model-test', {
-    preHandler: options.requireAdmin ?? (async (_request, reply) => { reply.code(401).send({ error: { code: 'AUTH_REQUIRED', message: 'Login administrator diperlukan.' } }); }),
+    preHandler: requireAdmin,
   }, async (request, reply) => {
     const start = Date.now();
     const input = modelTestSchema.safeParse(request.body);

@@ -78,6 +78,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     else if (path === '/v1/chat') limiter.take(`chat:${request.ip}`, 30, 60_000);
     else if (path === '/v1/uploads' || path === '/v1/attachments/extract') limiter.take(`files:${request.ip}`, 10, 60_000);
     else if (path === '/v1/admin/ai/model-test') limiter.take(`model-test:${request.ip}`, 5, 60_000);
+    else if (path === '/v1/admin/ai/models/reload') limiter.take(`model-reload:${request.ip}`, 15, 60_000);
     else limiter.take(`api:${request.ip}`, 240, 60_000);
   });
 

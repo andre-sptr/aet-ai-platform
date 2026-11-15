@@ -1,12 +1,13 @@
 import { AiError } from './errors.js';
 import { readBoundedBody } from './limits.js';
-import { SUMOPOD_ENDPOINT, type ModelSpec } from './models.js';
+import { SUMOPOD_ENDPOINT, SUMOPOD_MODELS_ENDPOINT, type ModelSpec } from './models.js';
 
 export type ProviderMessage = { role: 'system' | 'user' | 'assistant'; content: string | ({ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string } })[] };
 export type ProviderRequest = { model: ModelSpec; messages: ProviderMessage[]; signal: AbortSignal; maxTokens: number; effort: 'fast' | 'normal' | 'think' };
 export interface AiProvider {
   stream(request: ProviderRequest): AsyncIterable<string>;
   complete(request: ProviderRequest): Promise<string>;
+  listModels?(signal: AbortSignal): Promise<string[]>;
 }
 
 /** Incremental SSE decoder: frames may span chunks and use LF or CRLF. */
@@ -52,6 +53,64 @@ export async function* readProviderSse(body: ReadableStream<Uint8Array>, signal:
   }
 }
 
+const VALID_MODEL_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._:/-]*$/;
+
+async function assertProviderResponseOk(response: Response, hasApiKey: boolean): Promise<void> {
+  if (response.ok) return;
+  await response.body?.cancel();
+  const status = response.status;
+  if (!hasApiKey && (status === 401 || status === 403)) {
+    throw new AiError('PROVIDER_UNCONFIGURED', 'Layanan AI belum dikonfigurasi oleh pengelola.', 503);
+  }
+  throw new AiError(
+    status === 429 ? 'PROVIDER_RATE_LIMIT' : 'PROVIDER_REJECTED',
+    status === 401 || status === 403
+      ? 'Penyedia menolak autentikasi atau akses model. Pengelola perlu memeriksa akun Sumopod.'
+      : status === 404
+        ? 'Model tidak tersedia pada akun penyedia.'
+        : status === 429
+          ? 'Batas permintaan penyedia tercapai. Coba lagi nanti.'
+          : 'Penyedia AI sedang tidak tersedia.',
+    status === 429 ? 429 : 502,
+  );
+}
+
+function parseProviderModelList(raw: string): string[] {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    throw new AiError('PROVIDER_FRAME', 'Format respons daftar model penyedia tidak valid.', 502);
+  }
+  const items = Array.isArray(parsed)
+    ? parsed
+    : parsed && typeof parsed === 'object'
+      ? Array.isArray((parsed as { data?: unknown }).data)
+        ? (parsed as { data: unknown[] }).data
+        : Array.isArray((parsed as { models?: unknown }).models)
+          ? (parsed as { models: unknown[] }).models
+          : null
+      : null;
+  if (!items) {
+    throw new AiError('PROVIDER_FRAME', 'Format respons daftar model penyedia tidak valid.', 502);
+  }
+  const ids = new Set<string>();
+  for (const item of items) {
+    const candidate = typeof item === 'string'
+      ? item.trim()
+      : item && typeof item === 'object' && typeof (item as { id?: unknown }).id === 'string'
+        ? (item as { id: string }).id.trim()
+        : '';
+    if (candidate && candidate.length <= 160 && VALID_MODEL_ID_PATTERN.test(candidate)) {
+      ids.add(candidate);
+    }
+  }
+  if (!ids.size) {
+    throw new AiError('PROVIDER_EMPTY', 'Daftar model dari akun penyedia kosong.', 502);
+  }
+  return [...ids].sort((a, b) => a.localeCompare(b, 'en'));
+}
+
 export function createSumopodProvider(options: { apiKey?: string; fetcher?: typeof fetch } = {}): AiProvider {
   const fetcher = options.fetcher ?? fetch;
   async function open(request: ProviderRequest, stream: boolean) {
@@ -74,12 +133,7 @@ export function createSumopodProvider(options: { apiKey?: string; fetcher?: type
       signal: request.signal,
       redirect: 'error',
     });
-    if (!response.ok) {
-      await response.body?.cancel();
-      const status = response.status;
-      throw new AiError(status === 429 ? 'PROVIDER_RATE_LIMIT' : 'PROVIDER_REJECTED',
-        status === 401 || status === 403 ? 'Penyedia menolak autentikasi atau akses model. Pengelola perlu memeriksa akun Sumopod.' : status === 404 ? 'Model tidak tersedia pada akun penyedia.' : status === 429 ? 'Batas permintaan penyedia tercapai. Coba lagi nanti.' : 'Penyedia AI sedang tidak tersedia.', status === 429 ? 429 : 502);
-    }
+    await assertProviderResponseOk(response, true);
     return response;
   }
   return {
@@ -99,6 +153,19 @@ export function createSumopodProvider(options: { apiKey?: string; fetcher?: type
       const content = choice?.message?.content;
       if (typeof content !== 'string' || !content.trim()) throw new AiError('PROVIDER_EMPTY', 'Penyedia tidak mengirimkan jawaban.', 502);
       return content;
+    },
+    async listModels(signal) {
+      const key = (options.apiKey ?? process.env.SUMOPOD_API_KEY)?.trim() ?? '';
+      signal.throwIfAborted();
+      const response = await fetcher(SUMOPOD_MODELS_ENDPOINT, {
+        method: 'GET',
+        headers: key ? { Authorization: `Bearer ${key}` } : undefined,
+        signal,
+        redirect: 'error',
+      });
+      await assertProviderResponseOk(response, Boolean(key));
+      const raw = await readBoundedBody(response, 512_000, signal);
+      return parseProviderModelList(raw);
     },
   };
 }

@@ -18,6 +18,8 @@ export type ContentRow = {
   photoUrl?: string | null;
   order?: number;
   socials?: Record<string, string> | null;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 export type ContentForm = {
