@@ -226,6 +226,8 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
   const [form, setForm] = useState<ContentForm>(emptyForm);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadNotice, setUploadNotice] = useState<{ kind: "error" | "success"; message: string } | null>(null);
+  const uploadAbortRef = useRef<AbortController | null>(null);
   const [feedback, setFeedback] = useState<{ error: boolean; message: string } | null>(null);
   const [formError, setFormError] = useState("");
   const [invalidFields, setInvalidFields] = useState<Record<string, boolean>>({});
@@ -239,12 +241,20 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
     finally { setLoading(false); }
   }, [kind]);
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => () => { uploadAbortRef.current?.abort("unmount"); }, []);
   function open(row: ContentRow | "new") {
+    uploadAbortRef.current?.abort("cancelled");
     setForm(row === "new" ? emptyForm() : rowToForm(row));
     setFormError("");
+    setUploadNotice(null);
     setInvalidFields({});
     setSocialsInteracted(false);
     setEditing(row);
+  }
+  function closeEditor() {
+    uploadAbortRef.current?.abort("cancelled");
+    setUploadNotice(null);
+    setEditing(null);
   }
   function syncFieldValidity(key: string, element: HTMLInputElement | HTMLTextAreaElement) {
     const isInvalid = isElementUserInvalid(element);
@@ -275,15 +285,53 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
     finally { setBusy(false); }
   }
   async function upload(file?: File) {
-    if (!file) return; setUploading(true); setFormError("");
+    if (!file || busy || uploading) return;
+    setUploadNotice(null);
+    setFormError("");
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadNotice({ kind: "error", message: "Gambar maksimal 5 MB." });
+      return;
+    }
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 45_000);
+    setUploading(true);
     try {
-      if (file.size > 5 * 1024 * 1024) throw new Error("Gambar maksimal 5 MB.");
-      const response = await fetch(`${API_BASE}/v1/uploads`, { method: "POST", credentials: "include", headers: { "Content-Type": file.type || "application/octet-stream", "x-file-name": encodeURIComponent(file.name) }, body: file });
-      const data: { url?: string; error?: { message?: string } } = await response.json();
-      if (!response.ok || !data.url) throw new Error(data.error?.message || "Gambar tidak dapat diunggah. Penyimpanan mungkin belum dikonfigurasi.");
+      const response = await fetch(`${API_BASE}/v1/uploads`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": file.type || "application/octet-stream",
+          "x-file-name": encodeURIComponent(file.name),
+        },
+        body: file,
+        signal: controller.signal,
+      });
+      const data = (await response.json().catch(() => null)) as { url?: string; error?: { message?: string } } | null;
+      if (!response.ok || !data?.url) {
+        if (response.status === 413) {
+          throw new Error(data?.error?.message || "Ukuran gambar terlalu besar (maks. 5 MB atau melebihi batas unggahan server).");
+        }
+        throw new Error(data?.error?.message || "Gambar tidak dapat diunggah. Periksa koneksi atau konfigurasi penyimpanan.");
+      }
       update(kind === "team" ? "photoUrl" : "imageUrl", data.url);
-    } catch (caught) { setFormError(caught instanceof Error ? caught.message : "Unggah gambar gagal."); }
-    finally { setUploading(false); }
+      setUploadNotice({ kind: "success", message: `Berhasil diunggah: ${file.name}` });
+    } catch (caught) {
+      if (controller.signal.aborted && controller.signal.reason !== "timeout") return;
+      const message =
+        controller.signal.reason === "timeout"
+          ? "Waktu unggah habis (45 detik). Periksa koneksi lalu coba lagi."
+          : caught instanceof Error
+            ? caught.message
+            : "Unggah gambar gagal.";
+      setUploadNotice({ kind: "error", message });
+    } finally {
+      clearTimeout(timeoutId);
+      if (uploadAbortRef.current === controller) {
+        uploadAbortRef.current = null;
+      }
+      setUploading(false);
+    }
   }
   const now = Date.now();
   const publishedCount = kind === "team" ? 0 : rows.filter((row) => Boolean(row.published)).length;
@@ -673,8 +721,8 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
     {editing && (
       <AdminDialog
         title={`${editing === "new" ? "Tambah" : "Edit"} ${config.singular}`}
-        onClose={() => setEditing(null)}
-        busy={busy || uploading}
+        onClose={closeEditor}
+        busy={busy}
       >
         <form onSubmit={save} className="admin-editor">
           {formError && (
@@ -846,7 +894,7 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
             )}
             <div className="admin-field admin-field-wide">
               <span>{kind === "team" ? "Foto anggota" : "Gambar konten"}</span>
-              <div className="admin-image-input">
+              <div className={`admin-image-input${uploading ? " is-uploading" : ""}`}>
                 <SafeImage
                   src={kind === "team" ? form.photoUrl : form.imageUrl}
                   alt={kind === "team" ? "Pratinjau foto anggota" : "Pratinjau gambar konten"}
@@ -859,20 +907,44 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
                     identifier: true,
                     maxLength: 2048,
                   })}
-                  <label className="admin-upload-label">
-                    <Upload size={15} aria-hidden="true" />
-                    {uploading ? "Mengunggah…" : "Unggah gambar"}
-                    <input
-                      className="sr-only"
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      disabled={busy || uploading}
-                      onChange={(event) => {
-                        void upload(event.target.files?.[0]);
-                        event.target.value = "";
-                      }}
-                    />
-                  </label>
+                  <div className="admin-upload-row">
+                    <label
+                      className={`admin-upload-label${uploading ? " is-uploading" : ""}${busy ? " is-disabled" : ""}`}
+                      aria-busy={uploading}
+                      aria-disabled={busy || uploading}
+                    >
+                      {uploading ? (
+                        <LoaderCircle className="animate-spin" size={15} aria-hidden="true" />
+                      ) : (
+                        <Upload size={15} aria-hidden="true" />
+                      )}
+                      <span>{uploading ? "Mengunggah gambar…" : "Unggah gambar"}</span>
+                      <input
+                        className="sr-only"
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        disabled={busy || uploading}
+                        onChange={(event) => {
+                          const selected = event.target.files?.[0];
+                          event.target.value = "";
+                          void upload(selected);
+                        }}
+                      />
+                    </label>
+                    {uploading && (
+                      <span className="admin-upload-status" role="status" aria-live="polite">
+                        Memproses gambar…
+                      </span>
+                    )}
+                  </div>
+                  {uploadNotice && !uploading && (
+                    <small
+                      role={uploadNotice.kind === "error" ? "alert" : "status"}
+                      className={`admin-upload-feedback ${uploadNotice.kind === "error" ? "admin-field-error" : "admin-field-valid"}`}
+                    >
+                      {uploadNotice.message}
+                    </small>
+                  )}
                   <small>
                     JPEG, PNG, atau WebP, maksimal 5 MB. Unggah memerlukan penyimpanan yang sudah
                     dikonfigurasi.
@@ -899,8 +971,8 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
             <button
               type="button"
               className="button button-secondary"
-              onClick={() => setEditing(null)}
-              disabled={busy || uploading}
+              onClick={closeEditor}
+              disabled={busy}
             >
               Batal
             </button>

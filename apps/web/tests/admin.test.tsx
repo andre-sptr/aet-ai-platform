@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { after, afterEach, test } from "node:test";
+import { after, afterEach, mock, test } from "node:test";
 import React from "react";
 import { JSDOM } from "jsdom";
 import { emptyForm, formPayload, fromWibInput, makeSlug, rowToForm, toWibInput } from "../components/admin/content";
@@ -14,6 +14,18 @@ Object.defineProperty(globalThis, "HTMLInputElement", { value: dom.window.HTMLIn
 Object.defineProperty(globalThis, "MutationObserver", { value: dom.window.MutationObserver, configurable: true });
 Object.defineProperty(dom.window.HTMLDialogElement.prototype, "showModal", { value() { this.setAttribute("open", ""); } });
 Object.defineProperty(dom.window.HTMLDialogElement.prototype, "close", { value() { this.removeAttribute("open"); } });
+mock.module("next/image", {
+  exports: {
+    default: function MockImage({
+      unoptimized: _unoptimized,
+      priority: _priority,
+      fill: _fill,
+      ...props
+    }: Record<string, unknown>) {
+      return React.createElement("img", props);
+    },
+  },
+});
 const { render, fireEvent, waitFor, cleanup } = await import("@testing-library/react");
 const { LoginForm } = await import("../components/admin/LoginForm");
 const { ModelTestPanel } = await import("../components/admin/ModelTestPanel");
@@ -185,4 +197,51 @@ test("CMS news form creates a validated draft and refreshes its collection", asy
   fireEvent.click(view.getByRole("button", { name: "Publikasikan" }));
   await waitFor(() => assert.ok(view.getByText("Konten dipublikasikan.")));
   assert.equal(view.queryByText(/Rute detail baru memerlukan rebuild frontend/i), null);
+});
+
+test("image upload displays loading state while in flight, updates URL on success, and shows inline errors", async () => {
+  let resolveUpload: ((response: Response) => void) | undefined;
+  let uploadCalls = 0;
+  globalThis.fetch = async (input, options) => {
+    const path = String(input);
+    if (path.endsWith("/v1/uploads") && options?.method === "POST") {
+      uploadCalls += 1;
+      if (uploadCalls === 1) {
+        return await new Promise<Response>((resolve) => {
+          resolveUpload = resolve;
+        });
+      }
+      return Response.json({ error: { code: "STORAGE_UNAVAILABLE", message: "Penyimpanan belum aktif." } }, { status: 503 });
+    }
+    return Response.json([]);
+  };
+
+  const view = render(<ContentManager kind="news" />);
+  await waitFor(() => assert.ok(view.getByText("Cerita berikutnya dimulai di sini.")));
+  fireEvent.click(view.getByRole("button", { name: "Tambah berita" }));
+
+  const firstFile = new File([new Uint8Array([137, 80, 78, 71])], "cover.png", { type: "image/png" });
+  fireEvent.change(view.getByLabelText(/Unggah gambar/i), { target: { files: [firstFile] } });
+
+  await waitFor(() => assert.ok(view.getByText("Mengunggah gambar…")));
+  assert.ok(view.getByText("Memproses gambar…"));
+  const busyInput = view.getByLabelText(/Mengunggah gambar/i) as HTMLInputElement;
+  assert.equal(busyInput.disabled, true);
+  assert.equal(busyInput.closest("label")?.getAttribute("aria-busy"), "true");
+  assert.equal((view.getByRole("button", { name: "Simpan perubahan" }) as HTMLButtonElement).disabled, true);
+
+  resolveUpload?.(Response.json({ url: "https://blob.vercel-storage.invalid/aet/cover.png" }));
+
+  await waitFor(() => assert.ok(view.getByDisplayValue("https://blob.vercel-storage.invalid/aet/cover.png")));
+  assert.ok(view.getByText("Berhasil diunggah: cover.png"));
+  assert.equal(view.queryByText("Mengunggah gambar…"), null);
+  assert.equal((view.getByLabelText(/Unggah gambar/i) as HTMLInputElement).disabled, false);
+  assert.equal((view.getByRole("button", { name: "Simpan perubahan" }) as HTMLButtonElement).disabled, false);
+
+  const secondFile = new File([new Uint8Array([137, 80, 78, 71])], "broken.png", { type: "image/png" });
+  fireEvent.change(view.getByLabelText(/Unggah gambar/i), { target: { files: [secondFile] } });
+
+  await waitFor(() => assert.equal(view.getByRole("alert").textContent, "Penyimpanan belum aktif."));
+  assert.equal(view.queryByText("Mengunggah gambar…"), null);
+  assert.equal((view.getByRole("button", { name: "Simpan perubahan" }) as HTMLButtonElement).disabled, false);
 });

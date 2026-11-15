@@ -1712,6 +1712,13 @@ dialog.admin-dialog .admin-image-input {
   border-radius: 0.85rem;
   border: 1px dashed #cbd7e8;
   background: #f8fafd;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+dialog.admin-dialog .admin-image-input.is-uploading {
+  border-color: #6ea3f0;
+  background: #f2f7ff;
+  cursor: progress;
 }
 
 dialog.admin-dialog .admin-image-input > .admin-image-preview {
@@ -1753,13 +1760,21 @@ dialog.admin-dialog .admin-image-input > .admin-image-preview.image-fallback > s
   letter-spacing: 0.08em;
 }
 
+dialog.admin-dialog .admin-upload-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 0.65rem;
+}
+
 dialog.admin-dialog .admin-upload-label {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
   min-height: 40px;
   padding: 0.45rem 0.9rem;
-  margin-top: 0.65rem;
+  margin-top: 0;
   border-radius: 0.6rem;
   border: 1px solid #bfd6f8;
   background: #eef4ff;
@@ -1767,16 +1782,51 @@ dialog.admin-dialog .admin-upload-label {
   font-size: 0.84rem;
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease, opacity 140ms ease;
 }
 
-dialog.admin-dialog .admin-upload-label:hover {
+dialog.admin-dialog .admin-upload-label:hover:not(.is-uploading):not(.is-disabled) {
   background: #e0ecff;
   border-color: #93b8f2;
+}
+
+dialog.admin-dialog .admin-upload-label.is-uploading {
+  background: #e3edff;
+  border-color: #6ea3f0;
+  color: #0044ab;
+  cursor: progress;
+  pointer-events: none;
+}
+
+dialog.admin-dialog .admin-upload-label.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 dialog.admin-dialog .admin-upload-label:focus-within {
   outline: 2px solid #0056d2;
   outline-offset: 2px;
+}
+
+dialog.admin-dialog .admin-upload-status {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #2359ad;
+}
+
+dialog.admin-dialog .admin-field small.admin-upload-feedback {
+  display: block;
+  margin-top: 0.45rem;
+  font-size: 0.8rem;
+}
+
+dialog.admin-dialog .admin-field small.admin-upload-feedback.admin-field-error {
+  color: #b91c1c;
+}
+
+dialog.admin-dialog .admin-field small.admin-upload-feedback.admin-field-valid {
+  color: #166534;
 }
 
 dialog.admin-dialog .admin-publish-field {
