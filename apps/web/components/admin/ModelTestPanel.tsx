@@ -217,7 +217,7 @@ export function ModelTestPanel({
                   <Database size={12} aria-hidden="true" />
                   {cachedCatalog
                     ? `Cache website · ${availableModels.length} model`
-                    : `Kandidat awal · ${availableModels.length} model`}
+                    : `Bawaan server · ${availableModels.length} model`}
                 </span>
               </div>
               <p className="admin-model-catalog-meta">
@@ -244,7 +244,7 @@ export function ModelTestPanel({
             </div>
             <span className={`admin-model-source ${cachedCatalog ? "is-cached" : ""}`}>
               <Database size={12} aria-hidden="true" />
-              {cachedCatalog ? `${availableModels.length} model siap uji` : `${availableModels.length} kandidat awal`}
+              {cachedCatalog ? `${availableModels.length} model siap uji` : `${availableModels.length} Bawaan server`}
             </span>
           </div>
         )}

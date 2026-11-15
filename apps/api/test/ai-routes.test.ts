@@ -178,3 +178,30 @@ test('isMissingAiSettingsTable detects raw pg, Prisma P2021, and adapter-pg P201
   assert.equal(isMissingAiSettingsTable({ code: 'P2002', message: 'Unique constraint failed' }), false);
   assert.equal(isMissingAiSettingsTable(null), false);
 });
+
+test('system prompt includes explicit Markdown links for creator profiles across personas', async () => {
+  let systemPrompt = '';
+  const provider: AiProvider = {
+    async *stream(request) {
+      systemPrompt = String(request.messages[0]?.content ?? '');
+      yield 'ok';
+    },
+    async complete() { return 'unused'; },
+  };
+  const app = Fastify();
+  await registerAiRoutes(app, { provider });
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/chat',
+      payload: { persona: 'coding', effort: 'fast', messages: [{ role: 'user', content: 'Siapa pembuatmu?' }] },
+    });
+    assert.equal(res.statusCode, 200);
+    assert.match(systemPrompt, /\[Portofolio\]\(https:\/\/andresptr\.site\/\)/);
+    assert.match(systemPrompt, /\[GitHub\]\(https:\/\/github\.com\/andre-sptr\)/);
+    assert.match(systemPrompt, /\[LinkedIn\]\(https:\/\/www\.linkedin\.com\/in\/andre-sptr\/\)/);
+    assert.match(systemPrompt, /\[Instagram\]\(https:\/\/www\.instagram\.com\/andree\.sptrr\/\)/);
+  } finally {
+    await app.close();
+  }
+});

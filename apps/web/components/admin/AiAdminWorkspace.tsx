@@ -95,13 +95,13 @@ export function AiAdminWorkspace() {
                 <Database size={12} aria-hidden="true" />
                 {cachedCatalog
                   ? `Cache website · ${availableModels.length} model`
-                  : `Kandidat awal · ${availableModels.length} model`}
+                  : `Bawaan server · ${availableModels.length} model`}
               </span>
             </div>
             <p className="admin-model-catalog-meta">
               {cachedCatalog
                 ? `Terakhir dimuat ulang ${formatWibTimestamp(cachedCatalog.reloadedAt)} · dipakai untuk dropdown model.`
-                : "Muat daftar model aktif dari https://ai.sumopod.com/v1/models ke cache website untuk mengisi dropdown pengaturan dan uji model."}
+                : "Muat daftar model aktif dari https://ai.sumopod.com/v1/models ke cache website."}
             </p>
           </div>
           <button

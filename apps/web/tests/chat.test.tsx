@@ -142,3 +142,27 @@ test("completed assistant messages expose copy feedback controls with accessible
   assert.equal(helpful.getAttribute("aria-pressed"), "false");
   assert.equal(view.getByRole("button", { name: "Jawaban kurang membantu" }).getAttribute("aria-pressed"), "true");
 });
+
+test("markdown links inside assistant messages render as clickable external anchors", async () => {
+  globalThis.fetch = async () => new Response(new ReadableStream({ start(controller) {
+    controller.enqueue(frame("delta", {
+      text: "Lihat [Portofolio](https://andresptr.site/), [GitHub](https://github.com/andre-sptr), [LinkedIn](https://www.linkedin.com/in/andre-sptr/), dan [Instagram](https://www.instagram.com/andree.sptrr/).",
+    }));
+    controller.enqueue(frame("done", { status: "complete", requestId: "links" }));
+    controller.close();
+  } }), { headers: { "Content-Type": "text/event-stream" } });
+  const view = render(<ChatWorkspace initialPersona="daily" onBack={() => {}} />);
+  fireEvent.change(view.getByRole("textbox", { name: "Pesan untuk Smart Companion" }), { target: { value: "Siapa pembuat AET AI?" } });
+  await waitFor(() => assert.equal(view.getByRole("button", { name: "Kirim pesan" }).hasAttribute("disabled"), false));
+  fireEvent.click(view.getByRole("button", { name: "Kirim pesan" }));
+  const portfolioLink = await view.findByRole("link", { name: "Portofolio" });
+  const githubLink = view.getByRole("link", { name: "GitHub" });
+  const linkedinLink = view.getByRole("link", { name: "LinkedIn" });
+  const instagramLink = view.getByRole("link", { name: "Instagram" });
+  assert.equal(portfolioLink.getAttribute("href"), "https://andresptr.site/");
+  assert.equal(githubLink.getAttribute("href"), "https://github.com/andre-sptr");
+  assert.equal(linkedinLink.getAttribute("href"), "https://www.linkedin.com/in/andre-sptr/");
+  assert.equal(instagramLink.getAttribute("href"), "https://www.instagram.com/andree.sptrr/");
+  assert.equal(githubLink.getAttribute("target"), "_blank");
+  assert.equal(githubLink.getAttribute("rel"), "noopener noreferrer");
+});

@@ -277,7 +277,7 @@ export function AiSettingsCard({
                   <span>Pemetaan model per mode</span>
                 </h3>
                 <span className="admin-ai-group-caption">
-                  {hasCachedModels ? "Sumber daftar: cache Sumopod" : "Sumber daftar: kandidat awal"}
+                  {hasCachedModels ? "Sumber daftar: cache Sumopod" : "Sumber daftar: bawaan server"}
                 </span>
               </div>
 
@@ -414,7 +414,7 @@ export function AiSettingsCard({
                     </span>
                     <small id="aet-vision-model-hint">
                       {settings.features.visionEnabled
-                        ? "Dipakai otomatis saat pesan menyertakan gambar PNG, JPEG, atau WEBP."
+                        ? "Dipakai otomatis saat menyertakan gambar PNG, JPEG, atau WEBP."
                         : "Vision dimatikan. Permintaan bergambar akan ditolak dengan pesan jelas."}
                     </small>
                   </div>
