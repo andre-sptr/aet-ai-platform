@@ -8,7 +8,7 @@ if (!deployDir) {
 } else {
   const root = defaultProjectRoot();
   const outDir = join(root, 'apps', 'web', 'out');
-  await runStaticWebBuild({ projectRoot: root });
+  await runStaticWebBuild({ projectRoot: root, streamOutput: true });
   const stats = await syncStaticDirectory(outDir, resolve(deployDir));
   console.log(`Static website deployed to ${resolve(deployDir)} (copied=${stats.copied}, skipped=${stats.skipped}, removed=${stats.removed}).`);
 }

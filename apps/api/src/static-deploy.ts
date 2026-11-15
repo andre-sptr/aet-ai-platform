@@ -72,10 +72,25 @@ function appendTail(current: string, chunk: Buffer | string): string {
   return combined.length <= OUTPUT_TAIL_LIMIT ? combined : combined.slice(-OUTPUT_TAIL_LIMIT);
 }
 
+/** Extract trailing non-boilerplate error lines so npm lifecycle footers do not hide the root build error. */
+export function summarizeBuildOutputTail(tail: string): string {
+  const allLines = tail
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  const meaningful = allLines.filter(line => !/^npm (?:error|notice)\b/i.test(line));
+  const selected = (meaningful.length > 0 ? meaningful : allLines).slice(-8);
+  const summary = selected.join(' | ');
+  return summary.length <= 600 ? summary : `...${summary.slice(-597)}`;
+}
+
 /** Execute `npm run build:web` in the repository root with bounded logs and timeout. */
-export async function runStaticWebBuild(options: { projectRoot?: string; timeoutMs?: number } = {}): Promise<void> {
+export async function runStaticWebBuild(
+  options: { projectRoot?: string; timeoutMs?: number; streamOutput?: boolean } = {},
+): Promise<void> {
   const projectRoot = resolve(options.projectRoot ?? defaultProjectRoot());
   const timeoutMs = options.timeoutMs ?? DEFAULT_BUILD_TIMEOUT_MS;
+  const streamOutput = options.streamOutput === true;
   const { command, args } = resolveNpmBuildCommand();
   const nodeBinDir = dirname(process.execPath);
   const pathEntries = (process.env.PATH ?? '').split(delimiter).filter(Boolean);
@@ -108,8 +123,14 @@ export async function runStaticWebBuild(options: { projectRoot?: string; timeout
       else resolvePromise();
     };
 
-    child.stdout?.on('data', chunk => { tail = appendTail(tail, chunk); });
-    child.stderr?.on('data', chunk => { tail = appendTail(tail, chunk); });
+    child.stdout?.on('data', chunk => {
+      tail = appendTail(tail, chunk);
+      if (streamOutput) process.stdout.write(chunk);
+    });
+    child.stderr?.on('data', chunk => {
+      tail = appendTail(tail, chunk);
+      if (streamOutput) process.stderr.write(chunk);
+    });
     child.once('error', error => finish(error));
     child.once('close', (code, signal) => {
       if (timedOut) {
@@ -120,8 +141,8 @@ export async function runStaticWebBuild(options: { projectRoot?: string; timeout
         finish();
         return;
       }
-      const lastLine = tail.trim().split(/\r?\n/).at(-1) ?? '';
-      finish(new Error(`npm run build:web gagal (kode=${code ?? 'null'}, sinyal=${signal ?? 'none'})${lastLine ? `: ${lastLine}` : ''}`));
+      const summary = summarizeBuildOutputTail(tail);
+      finish(new Error(`npm run build:web gagal (kode=${code ?? 'null'}, sinyal=${signal ?? 'none'})${summary ? `: ${summary}` : ''}`));
     });
   });
 }

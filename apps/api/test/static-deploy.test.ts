@@ -4,7 +4,7 @@ import { mkdtemp, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/
 import { tmpdir } from 'node:os';
 import { join, parse, resolve } from 'node:path';
 import { readBackendEnv } from '../src/env.js';
-import { createStaticDeployRunner, resolveNpmBuildCommand, syncStaticDirectory } from '../src/static-deploy.js';
+import { createStaticDeployRunner, resolveNpmBuildCommand, summarizeBuildOutputTail, syncStaticDirectory } from '../src/static-deploy.js';
 
 function baseEnv(overrides: Record<string, string | undefined> = {}): NodeJS.ProcessEnv {
   return {
@@ -146,4 +146,27 @@ test('createStaticDeployRunner serializes builds, coalesces rapid triggers, and 
   assert.equal(warnings.length, 1);
   assert.equal(warnings[0].event, 'static_deploy_failed');
   failingRunner.close();
+});
+
+test('summarizeBuildOutputTail skips npm footer noise and keeps underlying build errors bounded', () => {
+  const npmWrapped = [
+    'Creating an optimized production build ...',
+    'Error: EACCES: permission denied, rmdir \'/opt/apps/aet-ai/apps/web/.next\'',
+    '⨯ Next.js build worker exited with code: 1 and signal: null',
+    'npm error Lifecycle script `build` failed with error:',
+    'npm error code 1',
+    'npm error command sh -c next build --webpack',
+  ].join('\n');
+  const summary = summarizeBuildOutputTail(npmWrapped);
+  assert.match(summary, /EACCES: permission denied/);
+  assert.match(summary, /Next\.js build worker exited/);
+  assert.doesNotMatch(summary, /npm error command sh -c/);
+
+  const npmOnly = 'npm notice run next\nnpm error code 1';
+  assert.equal(summarizeBuildOutputTail(npmOnly), 'npm notice run next | npm error code 1');
+
+  const oversized = `${'x'.repeat(800)}\nREAL_ERROR_LINE`;
+  const capped = summarizeBuildOutputTail(oversized);
+  assert.ok(capped.length <= 600);
+  assert.match(capped, /REAL_ERROR_LINE$/);
 });
