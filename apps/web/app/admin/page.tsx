@@ -45,6 +45,7 @@ type DashboardSnapshot = {
   news: AdminNewsItem[];
   events: AdminEventItem[];
   team: AdminTeamItem[];
+  fetchedAt: number;
 };
 
 const wibDateFormatter = new Intl.DateTimeFormat("id-ID", {
@@ -68,7 +69,6 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
     Promise.all([
       api<AdminNewsItem[]>("/v1/admin/news"),
       api<AdminEventItem[]>("/v1/admin/events"),
@@ -76,7 +76,7 @@ export default function AdminDashboard() {
     ])
       .then(([news, events, team]) => {
         if (!active) return;
-        setSnapshot({ news, events, team });
+        setSnapshot({ news, events, team, fetchedAt: Date.now() });
         setError("");
       })
       .catch((caught: unknown) => {
@@ -91,7 +91,7 @@ export default function AdminDashboard() {
     };
   }, [revision]);
 
-  const now = Date.now();
+  const now = snapshot?.fetchedAt ?? 0;
   const publishedNews = snapshot ? snapshot.news.filter((item) => item.published).length : 0;
   const draftNews = snapshot ? snapshot.news.length - publishedNews : 0;
   const publishedEvents = snapshot ? snapshot.events.filter((item) => item.published).length : 0;
@@ -186,6 +186,7 @@ export default function AdminDashboard() {
           <button
             type="button"
             onClick={() => {
+              setLoading(true);
               setError("");
               setRevision((n) => n + 1);
             }}

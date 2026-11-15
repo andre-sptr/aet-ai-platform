@@ -48,6 +48,8 @@ export function ModelDropdown({
   const [openUpward, setOpenUpward] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
+  const [touched, setTouched] = useState(false);
+  const [focusTriggerTick, setFocusTriggerTick] = useState(0);
   const touchedRef = useRef(false);
   const valueRef = useRef(value);
   const blurCallbackRef = useRef(onBlurAfterTouch);
@@ -58,12 +60,27 @@ export function ModelDropdown({
   const listboxId = useId();
 
   useEffect(() => {
+    touchedRef.current = touched;
+  }, [touched]);
+
+  useEffect(() => {
     valueRef.current = value;
   }, [value]);
 
   useEffect(() => {
     blurCallbackRef.current = onBlurAfterTouch;
   }, [onBlurAfterTouch]);
+
+  useEffect(() => {
+    if (!open) return;
+    queueMicrotask(() => searchRef.current?.focus());
+  }, [open]);
+
+  useEffect(() => {
+    if (focusTriggerTick > 0) {
+      triggerRef.current?.focus();
+    }
+  }, [focusTriggerTick]);
 
   const normalizedQuery = query.trim().toLowerCase();
   const options = useMemo(() => {
@@ -87,11 +104,11 @@ export function ModelDropdown({
   const closeMenu = (restoreFocus = false, runBlurCheck = false) => {
     setOpen(false);
     setQuery("");
-    if (runBlurCheck && touchedRef.current) {
+    if (runBlurCheck && touched) {
       onBlurAfterTouch?.(value);
     }
     if (restoreFocus) {
-      queueMicrotask(() => triggerRef.current?.focus());
+      setFocusTriggerTick((n) => n + 1);
     }
   };
 
@@ -106,7 +123,6 @@ export function ModelDropdown({
     const selectedIdx = options.findIndex((item) => item.value === value);
     setActiveIndex(selectedIdx >= 0 ? selectedIdx : 0);
     setOpen(true);
-    queueMicrotask(() => searchRef.current?.focus());
   };
 
   useEffect(() => {
@@ -135,11 +151,11 @@ export function ModelDropdown({
   }, [open]);
 
   const selectOption = (nextValue: string) => {
-    touchedRef.current = true;
+    setTouched(true);
     onChange(nextValue);
     setOpen(false);
     setQuery("");
-    queueMicrotask(() => triggerRef.current?.focus());
+    setFocusTriggerTick((n) => n + 1);
   };
 
   const moveHighlight = (nextIndex: number) => {
@@ -185,7 +201,7 @@ export function ModelDropdown({
       onBlur={(event) => {
         if (wrapRef.current?.contains(event.relatedTarget as Node | null)) return;
         if (open) closeMenu(false, true);
-        else if (touchedRef.current) onBlurAfterTouch?.(value);
+        else if (touched) onBlurAfterTouch?.(value);
       }}
     >
       <input type="hidden" name={name} value={value} />
@@ -198,9 +214,9 @@ export function ModelDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listboxId : undefined}
-        aria-required={required ? "true" : undefined}
-        aria-invalid={invalid ? "true" : "false"}
         aria-describedby={describedBy}
+        data-required={required ? "true" : undefined}
+        data-invalid={invalid ? "true" : "false"}
         disabled={disabled}
         title={isMono ? value : undefined}
         onClick={() => (open ? closeMenu(false, true) : openMenu())}

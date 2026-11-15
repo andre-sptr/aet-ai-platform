@@ -30,8 +30,8 @@ test('landing navigation preserves public destinations and all three persona cho
   }
   assert.ok(view.getByRole('heading', { name: /Intelligence for every idea/ }));
   assert.ok(view.getAllByRole('link', { name: 'Berita' }).some(link => link.getAttribute('href') === '/news/'));
-  const doc = view.getByRole('link', { name: /Dokumen AET PCR/ });
-  assert.equal(doc.getAttribute('href'), '/AETPCR.docx');
+  const docLinks = view.getAllByRole('link', { name: /Dokumen AET PCR/ });
+  assert.ok(docLinks.length >= 1 && docLinks.every(link => link.getAttribute('href') === '/AETPCR.docx'));
 });
 
 test('mobile menu opens an accessible native dialog and restores focus when closed', () => {

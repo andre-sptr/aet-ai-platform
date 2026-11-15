@@ -103,7 +103,7 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   const Icon = config.icon;
   const [store, setStore] = useState<ConversationStore>(() => emptyStore(activePersona));
   const storeRef = useRef(store);
-  const saveAllowed = useRef(false);
+  const [canPersist, setCanPersist] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [effort, setEffort] = useState<Effort>("normal");
@@ -142,22 +142,33 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
 
   const commit = useCallback((next: ConversationStore, write = true) => {
     storeRef.current = next; setStore(next);
-    if (write && saveAllowed.current) {
+    if (write && canPersist) {
       try { persistStore(localStorage, activePersona, next); }
       catch { setStorageError("Riwayat tidak dapat disimpan. Percakapan tetap tersedia selama halaman ini terbuka."); }
     }
-  }, [activePersona]);
+  }, [activePersona, canPersist]);
+
+  useEffect(() => {
+    storeRef.current = store;
+  }, [store]);
 
   useEffect(() => {
     let mounted = true;
     queueMicrotask(() => {
       if (!mounted) return;
-      try { const saved = loadStore(localStorage, activePersona); saveAllowed.current = true; commit(saved, false); }
-      catch (failure) { saveAllowed.current = false; setStorageError(errorMessage(failure)); }
+      try {
+        const saved = loadStore(localStorage, activePersona);
+        storeRef.current = saved;
+        setStore(saved);
+        setCanPersist(true);
+      } catch (failure) {
+        setCanPersist(false);
+        setStorageError(errorMessage(failure));
+      }
       setLoaded(true);
     });
     return () => { mounted = false; request.current?.abort(); uploadRequest.current?.abort(); };
-  }, [commit, activePersona]);
+  }, [activePersona]);
 
   useEffect(() => {
     if (!shouldAutoScroll.current) return;
@@ -364,7 +375,13 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
     { label: "Sebelumnya", items: history.filter(item => dayKey(item.updatedAt) !== dayKey(today) && dayKey(item.updatedAt) !== dayKey(yesterday)) },
   ].filter(group => group.items.length);
   const selectConversation = (id: string) => {
-    commit({ ...storeRef.current, activeId: id }); setError(""); setEditId(null); setInput(""); setAttachments([]); setMobileSidebarOpen(false);
+    const next = { ...store, activeId: id };
+    setStore(next);
+    if (canPersist) {
+      try { persistStore(localStorage, activePersona, next); }
+      catch { setStorageError("Riwayat tidak dapat disimpan. Percakapan tetap tersedia selama halaman ini terbuka."); }
+    }
+    setError(""); setEditId(null); setInput(""); setAttachments([]); setMobileSidebarOpen(false);
   };
   return <div className={`chat-workspace persona-${activePersona} ui-editorial sb-modular sbg-mist ${isEmptyChat ? "is-empty-chat" : "is-active-chat"}${sidebarCollapsed ? " sidebar-collapsed" : ""}${mobileSidebarOpen ? " mobile-sidebar-open" : ""}`}>
     <a href="#chat-main" className="chat-skip">Lewati ke percakapan</a>
