@@ -20,6 +20,7 @@
     "build:web": "npm run build --workspace=@aet/contracts && npm run sync:routes && node scripts/with-env.mjs npm run build --workspace=@aet/web && npm run verify:export",
     "build:api": "npm run build --workspace=@aet/contracts && npm run build --workspace=@aet/api",
     "build": "npm run build:api && npm run build:web",
+    "deploy:web": "node scripts/with-env.mjs tsx scripts/deploy-web.ts",
     "sync:routes": "node scripts/with-env.mjs tsx scripts/sync-routes.ts",
     "verify:export": "node scripts/with-env.mjs tsx scripts/verify-export.ts",
     "seed": "node scripts/with-env.mjs tsx scripts/import-legacy.ts",

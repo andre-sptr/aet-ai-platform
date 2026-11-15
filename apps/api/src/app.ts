@@ -2,13 +2,14 @@ import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import { z } from 'zod';
-import { NewsInputSchema, EventInputSchema, TeamMemberInputSchema, LoginSchema, NewsSchema, EventSchema, TeamMemberSchema } from '@aet/contracts';
+import { NewsInputSchema, EventInputSchema, TeamMemberInputSchema, LoginSchema, NewsSchema, EventSchema, TeamMemberSchema, type News, type Event as AetEvent } from '@aet/contracts';
 import { ApiError } from './errors.js';
 import { hashPassword, verifyPassword, newSessionToken, sessionDigest, type RequireAdmin } from './auth.js';
 import { readBackendEnv, type BackendEnv } from './env.js';
-import { createPrismaRepository, type Repository, type Resource } from './repository.js';
+import { createPrismaRepository, type ContentRecord, type Repository, type Resource } from './repository.js';
 import { RateLimiter } from './rate-limit.js';
 import { configuredImageStorage, validateDecodedImage, type ImageStorage } from './storage.js';
+import { createStaticDeployRunner, type StaticDeployRunner } from './static-deploy.js';
 import { registerAiRoutes } from './ai/routes.js';
 import type { AiProvider } from './ai/provider.js';
 
@@ -17,6 +18,8 @@ export interface AppOptions {
   env?: BackendEnv;
   aiProvider?: AiProvider;
   storage?: ImageStorage;
+  rebuildFetcher?: typeof fetch;
+  staticDeploy?: Pick<StaticDeployRunner, 'trigger' | 'close'>;
   now?: () => number;
 }
 
@@ -29,6 +32,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
   const env = options.env ?? readBackendEnv();
   const repository = options.repository ?? await createPrismaRepository(env.databaseUrl);
   const storage = options.storage ?? configuredImageStorage();
+  const rebuildFetcher = options.rebuildFetcher ?? globalThis.fetch;
   const now = options.now ?? Date.now;
   const limiter = new RateLimiter(now);
   const app = Fastify({
@@ -106,7 +110,12 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     return reply.status(500).send({ error: { code: 'INTERNAL_ERROR', message: 'Layanan mengalami kendala. Silakan coba lagi.' } });
   });
   app.setNotFoundHandler((_request, reply) => reply.status(404).send({ error: { code: 'NOT_FOUND', message: 'Endpoint tidak ditemukan.' } }));
-  app.addHook('onClose', async () => { await repository.close?.(); });
+  const staticDeploy = env.production
+    ? (options.staticDeploy ?? (env.staticDeployDir
+      ? createStaticDeployRunner({ deployDir: env.staticDeployDir, logger: app.log })
+      : undefined))
+    : undefined;
+  app.addHook('onClose', async () => { staticDeploy?.close?.(); await repository.close?.(); });
 
   app.get('/health', async (_request, reply) => {
     try { await repository.ping(); return { status: 'ok', service: 'aet-api' }; }
@@ -131,9 +140,19 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     return { ok: true };
   });
 
-  const notifyRebuild = () => {
-    if (!env.rebuildHook) return;
-    void fetch(env.rebuildHook, { method: 'POST', signal: AbortSignal.timeout(5000), redirect: 'error' }).catch(() => undefined);
+  const notifyRebuild = (resource: Resource, beforeKey: string | null, afterKey: string | null) => {
+    if (!env.production || beforeKey === afterKey) return;
+    staticDeploy?.trigger();
+    const rebuildHook = env.rebuildHook;
+    if (!rebuildHook) return;
+    void Promise.resolve()
+      .then(() => rebuildFetcher(rebuildHook, { method: 'POST', signal: AbortSignal.timeout(5000), redirect: 'error' }))
+      .then(response => {
+        if (!response.ok) app.log.warn({ event: 'static_rebuild_failed', resource, status: response.status });
+      })
+      .catch(() => {
+        app.log.warn({ event: 'static_rebuild_failed', resource });
+      });
   };
   for (const resource of resources) {
     app.get(`/v1/${resource}`, async () => outputSchemas[resource].array().parse(await repository.list(resource)));
@@ -148,7 +167,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
       const input = inputSchemas[resource].parse(request.body);
       checkEventDates(resource, input);
       const record = await repository.create(resource, input);
-      notifyRebuild();
+      notifyRebuild(resource, null, publicDetailRouteKey(resource, record));
       return reply.status(201).send(outputSchemas[resource].parse(record));
     });
     app.patch(`/v1/admin/${resource}/:key`, { preHandler: requireAdmin }, async request => {
@@ -161,14 +180,15 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
       if (!existing) throw new ApiError(404, 'NOT_FOUND', 'Data tidak ditemukan.');
       checkEventDates(resource, { ...existing, ...input });
       const record = await repository.update(resource, key, input);
-      notifyRebuild();
+      notifyRebuild(resource, publicDetailRouteKey(resource, existing), publicDetailRouteKey(resource, record));
       return outputSchemas[resource].parse(record);
     });
     app.delete(`/v1/admin/${resource}/:key`, { preHandler: requireAdmin }, async request => {
       const key = parseKey(request);
-      if (!await repository.find(resource, key, true)) throw new ApiError(404, 'NOT_FOUND', 'Data tidak ditemukan.');
+      const existing = await repository.find(resource, key, true);
+      if (!existing) throw new ApiError(404, 'NOT_FOUND', 'Data tidak ditemukan.');
       await repository.delete(resource, key);
-      notifyRebuild();
+      notifyRebuild(resource, publicDetailRouteKey(resource, existing), null);
       return { ok: true };
     });
   }
@@ -196,6 +216,19 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
 
 function parseKey(request: FastifyRequest): string {
   return keySchema.parse((request.params as { key?: string }).key);
+}
+
+function publicDetailRouteKey(resource: Resource, record: ContentRecord | null | undefined): string | null {
+  if (!record) return null;
+  if (resource === 'news') {
+    const item = record as News;
+    return item.published ? item.slug : null;
+  }
+  if (resource === 'events') {
+    const item = record as AetEvent;
+    return item.published ? item.id : null;
+  }
+  return null;
 }
 
 function checkEventDates(resource: Resource, input: Record<string, unknown>): void {

@@ -162,11 +162,18 @@ test("CMS news form creates a validated draft and refreshes its collection", asy
       saved = JSON.parse(String(options.body)) as Record<string, unknown>;
       return Response.json({ id: "new-news", ...saved }, { status: 201 });
     }
+    if (options?.method === "PATCH") {
+      const patch = JSON.parse(String(options.body)) as Record<string, unknown>;
+      saved = { ...saved, ...patch };
+      return Response.json({ id: "new-news", ...saved });
+    }
     return Response.json(saved ? [{ id: "new-news", ...saved }] : []);
   };
   const view = render(<ContentManager kind="news" />);
   await waitFor(() => assert.ok(view.getByText("Cerita berikutnya dimulai di sini.")));
+  assert.equal(view.queryByText(/memerlukan rebuild dan deployment frontend/i), null);
   fireEvent.click(view.getByRole("button", { name: "Tambah berita" }));
+  assert.equal(view.queryByText(/Perubahan slug memerlukan rebuild/i), null);
   fireEvent.change(view.getByLabelText("Judul berita"), { target: { value: "Cerita AET" } });
   fireEvent.change(view.getByLabelText("Konten artikel"), { target: { value: "Artikel **Markdown**." } });
   fireEvent.submit(view.getByRole("button", { name: "Simpan perubahan" }).closest("form")!);
@@ -175,4 +182,7 @@ test("CMS news form creates a validated draft and refreshes its collection", asy
   assert.equal(saved?.published, false);
   assert.equal(saved?.content, "Artikel **Markdown**.");
   await waitFor(() => assert.ok(view.getByText("Cerita AET")));
+  fireEvent.click(view.getByRole("button", { name: "Publikasikan" }));
+  await waitFor(() => assert.ok(view.getByText("Konten dipublikasikan.")));
+  assert.equal(view.queryByText(/Rute detail baru memerlukan rebuild frontend/i), null);
 });

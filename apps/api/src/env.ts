@@ -1,3 +1,5 @@
+import { isAbsolute, parse, resolve } from 'node:path';
+
 export interface BackendEnv {
   databaseUrl: string;
   sessionSecret: string;
@@ -6,6 +8,7 @@ export interface BackendEnv {
   port: number;
   cookieSameSite: 'lax' | 'none' | 'strict';
   rebuildHook?: string;
+  staticDeployDir?: string;
 }
 
 export function readBackendEnv(source: NodeJS.ProcessEnv = process.env): BackendEnv {
@@ -26,9 +29,22 @@ export function readBackendEnv(source: NodeJS.ProcessEnv = process.env): Backend
   if (cookieSameSite === 'none' && !production) throw new Error('Cross-site cookies require HTTPS production mode.');
   const port = Number(source.PORT ?? 4000);
   if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error('PORT must be a valid port number.');
-  if (source.STATIC_REBUILD_HOOK_URL) {
-    const url = new URL(source.STATIC_REBUILD_HOOK_URL);
+  const rebuildHook = source.STATIC_REBUILD_HOOK_URL?.trim() || undefined;
+  if (rebuildHook) {
+    const url = new URL(rebuildHook);
     if (url.protocol !== 'https:' || url.username || url.password) throw new Error('STATIC_REBUILD_HOOK_URL must use HTTPS.');
   }
-  return { databaseUrl, sessionSecret, appOrigins, production, port, cookieSameSite: cookieSameSite as BackendEnv['cookieSameSite'], rebuildHook: source.STATIC_REBUILD_HOOK_URL };
+  const rawDeployDir = source.STATIC_DEPLOY_DIR?.trim() || undefined;
+  let staticDeployDir: string | undefined;
+  if (rawDeployDir) {
+    if (rawDeployDir.includes('\0') || !isAbsolute(rawDeployDir)) {
+      throw new Error('STATIC_DEPLOY_DIR must be an absolute directory path.');
+    }
+    const resolvedDir = resolve(rawDeployDir);
+    if (parse(resolvedDir).root === resolvedDir) {
+      throw new Error('STATIC_DEPLOY_DIR must point to a dedicated website directory, not a filesystem root.');
+    }
+    staticDeployDir = resolvedDir;
+  }
+  return { databaseUrl, sessionSecret, appOrigins, production, port, cookieSameSite: cookieSameSite as BackendEnv['cookieSameSite'], rebuildHook, staticDeployDir };
 }

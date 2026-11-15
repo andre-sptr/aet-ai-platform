@@ -9,7 +9,7 @@ if (!command) throw new Error('A command is required.');
 const env = {...process.env};
 if (args.includes('--workspace=@aet/web')) {
   for (const name of Object.keys(loaded.parsed??{})) if(!name.startsWith('NEXT_PUBLIC_'))delete env[name];
-  for (const name of ['DATABASE_URL','SESSION_SECRET','SUMOPOD_API_KEY','TAVILY_API_KEY','BLOB_READ_WRITE_TOKEN','STATIC_REBUILD_HOOK_URL','APP_ORIGIN']) delete env[name];
+  for (const name of ['DATABASE_URL','SESSION_SECRET','SUMOPOD_API_KEY','TAVILY_API_KEY','BLOB_READ_WRITE_TOKEN','STATIC_REBUILD_HOOK_URL','STATIC_DEPLOY_DIR','APP_ORIGIN']) delete env[name];
 }
 try {
   const child=spawnProjectCommand(command,args,{cwd:root,env});

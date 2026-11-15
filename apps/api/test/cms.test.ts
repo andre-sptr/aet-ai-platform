@@ -14,12 +14,28 @@ const password = 'disposable-test-password-32';
 function testEnv(): BackendEnv {
   return { databaseUrl: 'postgresql://unused-test/unused', sessionSecret: randomBytes(32).toString('hex'), appOrigins: [origin], production: false, port: 4000, cookieSameSite: 'lax' };
 }
-async function fixture(run: (app: FastifyInstance, repository: MemoryRepository) => Promise<void>, options: { now?: () => number; production?: boolean } = {}) {
+async function fixture(
+  run: (app: FastifyInstance, repository: MemoryRepository) => Promise<void>,
+  options: {
+    now?: () => number;
+    production?: boolean;
+    rebuildHook?: string;
+    rebuildFetcher?: typeof fetch;
+    staticDeploy?: { trigger(): void; close?(): void };
+  } = {},
+) {
   const repository = new MemoryRepository();
   await repository.createAdmin('operator', await hashPassword(password));
   const env = testEnv();
   env.production = options.production ?? false;
-  const app = await buildApp({ repository, env, now: options.now });
+  env.rebuildHook = options.rebuildHook;
+  const app = await buildApp({
+    repository,
+    env,
+    now: options.now,
+    rebuildFetcher: options.rebuildFetcher,
+    staticDeploy: options.staticDeploy,
+  });
   try { await run(app, repository); } finally { await app.close(); }
 }
 async function login(app: FastifyInstance) {
@@ -150,4 +166,103 @@ test('rate-limit windows reset after elapsed time and never permit the extra req
   assert.throws(() => limiter.take('user', 1, 1000), /Terlalu banyak/);
   time = 1001;
   assert.doesNotThrow(() => limiter.take('user', 1, 1000));
+});
+
+test('static rebuild hook triggers only in production when public detail routes or published slugs change', async () => {
+  const hookUrl = 'https://hooks.vercel.invalid/deploy-token';
+  const devCalls: string[] = [];
+  await fixture(async app => {
+    const cookie = await login(app), headers = { origin, cookie };
+    const created = await app.inject({ method: 'POST', url: '/v1/admin/news', headers, payload: { ...news, published: true } });
+    assert.equal(created.statusCode, 201);
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(devCalls.length, 0);
+  }, { production: false, rebuildHook: hookUrl, rebuildFetcher: async input => { devCalls.push(String(input)); return new Response(null, { status: 200 }); } });
+
+  const prodCalls: { url: string; method?: string }[] = [];
+  let localDeployTriggers = 0;
+  let localDeployClosed = false;
+  await fixture(async app => {
+    const cookie = await login(app), headers = { origin, cookie };
+    const flush = () => new Promise(resolve => setImmediate(resolve));
+
+    // Team mutations never have detail routes -> no rebuild
+    const team = await app.inject({ method: 'POST', url: '/v1/admin/team', headers, payload: { name: 'Pengurus', position: 'Ketua' } });
+    assert.equal(team.statusCode, 201);
+    await flush();
+    assert.equal(prodCalls.length, 0);
+    assert.equal(localDeployTriggers, 0);
+
+    // Draft news creation and editing draft slug -> no rebuild
+    const draft = await app.inject({ method: 'POST', url: '/v1/admin/news', headers, payload: { ...news, published: false } });
+    assert.equal(draft.statusCode, 201);
+    const draftId = draft.json().id;
+    await app.inject({ method: 'PATCH', url: `/v1/admin/news/${draftId}`, headers, payload: { slug: 'draft-baru' } });
+    await flush();
+    assert.equal(prodCalls.length, 0);
+    assert.equal(localDeployTriggers, 0);
+
+    // Publishing the draft news -> triggers rebuild (1)
+    await app.inject({ method: 'PATCH', url: `/v1/admin/news/${draftId}`, headers, payload: { published: true } });
+    await flush();
+    assert.equal(prodCalls.length, 1);
+    assert.equal(localDeployTriggers, 1);
+
+    // Editing content/title of published news without slug change -> no rebuild
+    await app.inject({ method: 'PATCH', url: `/v1/admin/news/${draftId}`, headers, payload: { title: 'Judul Diperbarui' } });
+    await flush();
+    assert.equal(prodCalls.length, 1);
+    assert.equal(localDeployTriggers, 1);
+
+    // Changing slug on published news -> triggers rebuild (2)
+    await app.inject({ method: 'PATCH', url: `/v1/admin/news/${draftId}`, headers, payload: { slug: 'slug-berubah' } });
+    await flush();
+    assert.equal(prodCalls.length, 2);
+    assert.equal(localDeployTriggers, 2);
+
+    // Creating directly published news -> triggers rebuild (3)
+    const publishedNews = await app.inject({ method: 'POST', url: '/v1/admin/news', headers, payload: { ...news, slug: 'terbit-langsung', published: true } });
+    assert.equal(publishedNews.statusCode, 201);
+    await flush();
+    assert.equal(prodCalls.length, 3);
+    assert.equal(localDeployTriggers, 3);
+
+    // Deleting published news -> triggers rebuild (4)
+    await app.inject({ method: 'DELETE', url: `/v1/admin/news/${publishedNews.json().id}`, headers });
+    await flush();
+    assert.equal(prodCalls.length, 4);
+    assert.equal(localDeployTriggers, 4);
+
+    // Published event lifecycle: create published (5), edit title without route change (5), unpublish (6)
+    const event = await app.inject({ method: 'POST', url: '/v1/admin/events', headers, payload: { title: 'Seminar AET', description: 'Acara', startDate: '2026-11-20T09:00:00+07:00', published: true } });
+    assert.equal(event.statusCode, 201);
+    const eventId = event.json().id;
+    await flush();
+    assert.equal(prodCalls.length, 5);
+    assert.equal(localDeployTriggers, 5);
+    await app.inject({ method: 'PATCH', url: `/v1/admin/events/${eventId}`, headers, payload: { title: 'Seminar AET Update' } });
+    await flush();
+    assert.equal(prodCalls.length, 5);
+    assert.equal(localDeployTriggers, 5);
+    await app.inject({ method: 'PATCH', url: `/v1/admin/events/${eventId}`, headers, payload: { published: false } });
+    await flush();
+    assert.equal(prodCalls.length, 6);
+    assert.equal(localDeployTriggers, 6);
+    // Deleting now-draft event -> no rebuild
+    await app.inject({ method: 'DELETE', url: `/v1/admin/events/${eventId}`, headers });
+    await flush();
+    assert.equal(prodCalls.length, 6);
+    assert.equal(localDeployTriggers, 6);
+
+    assert.ok(prodCalls.every(call => call.url === hookUrl && call.method === 'POST'));
+  }, {
+    production: true,
+    rebuildHook: hookUrl,
+    rebuildFetcher: async (input, init) => { prodCalls.push({ url: String(input), method: init?.method }); return new Response(null, { status: 200 }); },
+    staticDeploy: {
+      trigger() { localDeployTriggers += 1; },
+      close() { localDeployClosed = true; },
+    },
+  });
+  assert.equal(localDeployClosed, true);
 });

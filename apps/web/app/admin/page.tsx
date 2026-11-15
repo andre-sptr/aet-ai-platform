@@ -329,10 +329,6 @@ export default function AdminDashboard() {
                 <CheckCircle2 size={15} aria-hidden="true" />
                 <span>Atur urutan anggota pada menu Struktur tim sebelum menyimpan.</span>
               </li>
-              <li>
-                <CheckCircle2 size={15} aria-hidden="true" />
-                <span>Jalankan rebuild frontend jika URL detail berita atau kegiatan berubah.</span>
-              </li>
             </ul>
           </section>
 

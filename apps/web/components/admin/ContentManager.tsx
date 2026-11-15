@@ -8,7 +8,6 @@ import {
   Clock3,
   Edit3,
   ExternalLink,
-  Info,
   LoaderCircle,
   MapPin,
   Newspaper,
@@ -271,7 +270,7 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
   }
   async function togglePublication(row: ContentRow) {
     setBusy(true);
-    try { await api(`/v1/admin/${kind}/${encodeURIComponent(row.id)}`, { method: "PATCH", body: JSON.stringify({ published: !row.published }) }); setFeedback({ error: false, message: row.published ? "Konten dikembalikan ke draf." : "Konten dipublikasikan. Rute detail baru memerlukan rebuild frontend." }); await load(); }
+    try { await api(`/v1/admin/${kind}/${encodeURIComponent(row.id)}`, { method: "PATCH", body: JSON.stringify({ published: !row.published }) }); setFeedback({ error: false, message: row.published ? "Konten dikembalikan ke draf." : "Konten dipublikasikan." }); await load(); }
     catch (caught) { setFeedback({ error: true, message: caught instanceof Error ? caught.message : "Status tidak dapat diubah." }); }
     finally { setBusy(false); }
   }
@@ -395,16 +394,6 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
         Tambah {config.singular}
       </button>
     </div>
-
-    {kind !== "team" && (
-      <div className="admin-static-note" role="note">
-        <Info size={18} aria-hidden="true" />
-        <span>
-          Konten baru atau perubahan URL detail memerlukan rebuild dan deployment frontend. Draf dan
-          konten yang dihapus akan ditolak API meskipun halaman statis lama masih tersimpan.
-        </span>
-      </div>
-    )}
 
     {feedback && (
       <div
@@ -704,7 +693,7 @@ export function ContentManager({ kind }: { kind: ContentKind }) {
                 {input("slug", "Slug / URL", {
                   required: true,
                   identifier: true,
-                  hint: `URL publik: /news/${slugPreview}/ · Huruf kecil, angka, dan tanda hubung. Perubahan slug memerlukan rebuild.`,
+                  hint: `URL publik: /news/${slugPreview}/ · Huruf kecil, angka, dan tanda hubung.`,
                   maxLength: 120,
                 })}
                 {input("summary", "Ringkasan", {
