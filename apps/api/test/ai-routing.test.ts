@@ -21,6 +21,10 @@ test('task-aware catalog chooses different candidates and effort changes bounded
   assert.equal(selectModels(casual, 'fast')[0]?.id, 'gpt-4o-mini');
   assert.equal(selectModels(coding, 'normal')[0]?.id, 'gpt-4.1-mini');
   assert.equal(selectModels(complex, 'think')[0]?.id, 'gpt-5-mini');
+  assert.equal(classify(input('Hitung persamaan integral berikut ini', 'normal', 'coding')).taskType, 'math');
+  assert.equal(classify(input('Perbaiki paragraf draft esai ini agar mengalir rapi', 'normal', 'report')).taskType, 'writing');
+  assert.equal(classify(input('Jelaskan pola desain singleton secara ringkas', 'normal', 'coding')).taskType, 'coding');
+  assert.equal(classify(input('Bandingkan dua argumen ini secara objektif', 'normal', 'report')).taskType, 'research');
   assert.equal(strategyFor(casual, 'fast').plan, false);
   assert.equal(strategyFor(complex, 'think').plan, true);
   assert.equal(strategyFor(complex, 'think').verify, true);

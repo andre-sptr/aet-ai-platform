@@ -27,7 +27,26 @@ export function classify(request: ChatRequest): Classification {
   const math = /\b(?:hitung|calculate|persamaan|equation|statistik|statistics|integral|matriks|matrix)\b/i.test(recent);
   const research = /\b(?:penelitian|research|referensi|citation|sitasi|jurnal|literature|sumber|sources)\b/i.test(recent);
   const writing = /\b(?:tulis|write|essay|esai|makalah|skripsi|surat|draft|paragraf)\b/i.test(recent);
-  const taskType: TaskType = images ? 'image' : code || request.persona === 'coding' ? 'coding' : math ? 'math' : research || request.persona === 'report' ? 'research' : document ? 'document' : writing ? 'writing' : 'general';
+  const explicitTaskType: TaskType | null = images
+    ? 'image'
+    : code
+      ? 'coding'
+      : math
+        ? 'math'
+        : research
+          ? 'research'
+          : document
+            ? 'document'
+            : writing
+              ? 'writing'
+              : null;
+  const taskType: TaskType = explicitTaskType ?? (
+    request.persona === 'coding'
+      ? 'coding'
+      : request.persona === 'report'
+        ? 'research'
+        : 'general'
+  );
   const indicators = [last.content.length > 1200, /\b(?:bandingkan|compare|analisis|analyze|rancang|design|buktikan|prove|arsitektur|architecture)\b/i.test(last.content), (last.content.match(/\n[-\d*]|\?/g) ?? []).length > 3, document, images && code, /\b(?:produksi|production|keamanan|security|diagnos|medis|legal|keuangan|financial)\b/i.test(last.content)].filter(Boolean).length;
   const complexity = indicators >= 2 ? 'complex' : indicators || last.content.length > 350 ? 'moderate' : 'simple';
   return { taskType, complexity, needsTools: tools.length > 0, needsVerification: complexity === 'complex' || math && complexity !== 'simple', requiredCapabilities: { vision: images }, contextCharacters, tools: tools.slice(0, 3) };

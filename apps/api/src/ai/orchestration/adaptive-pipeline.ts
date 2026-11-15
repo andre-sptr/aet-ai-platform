@@ -21,6 +21,7 @@ export type AdaptivePipelineOptions = {
   task: TaskProfile;
   effort: Effort;
   candidates: readonly RegisteredModel[];
+  preferredModelId?: string;
   signal: AbortSignal;
   maxModelCalls: number;
   maxOutputTokens: number;
@@ -57,6 +58,9 @@ export async function* runAdaptivePipeline(
   options: AdaptivePipelineOptions,
 ): AsyncGenerator<AdaptivePipelineEvent> {
   const { provider, messages, task, effort, candidates, signal } = options;
+  const preferredCandidate = options.preferredModelId
+    ? candidates.find(candidate => candidate.id === options.preferredModelId)
+    : undefined;
   let callsUsed = 0;
   const modelsUsed: string[] = [];
 
@@ -114,7 +118,7 @@ export async function* runAdaptivePipeline(
     message: 'Menyusun rencana kerja adaptif',
   };
 
-  const plannerModel = modelForTask(
+  const plannerModel = preferredCandidate ?? modelForTask(
     { ...task, taskType: 'general', reasoningLevel: 'high' },
     effort,
     candidates,
@@ -126,11 +130,11 @@ export async function* runAdaptivePipeline(
   );
   const subtasks = safeSubtasks(planCall.text, task);
 
-  // Reserve calls for evaluation and a possible revision when quality
-  // evaluation is enabled. The planner and final evaluator each consume one.
+  // Reserve calls for evaluation/review (and revision when budget allows).
+  // Planner consumes one call and review/evaluation consumes at least one call.
   const generationCapacity = options.qualityEvaluation
     ? Math.max(1, Math.min(2, options.maxModelCalls - 3))
-    : 2;
+    : Math.max(1, Math.min(2, options.maxModelCalls - 2));
   const boundedSubtasks = subtasks.slice(0, generationCapacity);
   const generated: Array<{ subtask: PlannedSubtask; answer: string; model: string }> = [];
 
@@ -142,7 +146,7 @@ export async function* runAdaptivePipeline(
       taskType: subtask.taskType,
       needsSemanticClassification: false,
     };
-    const generatorModel = modelForTask(subtaskProfile, effort, candidates);
+    const generatorModel = preferredCandidate ?? modelForTask(subtaskProfile, effort, candidates);
 
     yield {
       type: 'stage',
@@ -169,7 +173,8 @@ export async function* runAdaptivePipeline(
     candidates,
   );
   const lastGeneratorModel = generated.at(-1)!.model;
-  const reviewerModel = reviewerCandidates.find(model => model.id !== lastGeneratorModel)
+  const reviewerModel = preferredCandidate
+    ?? reviewerCandidates.find(model => model.id !== lastGeneratorModel)
     ?? reviewerCandidates[0]!;
 
   let answer = draft;
@@ -212,7 +217,7 @@ export async function* runAdaptivePipeline(
       const issues = evaluation?.issues.map(issue =>
         `[${issue.dimension}/${issue.severity}] ${issue.description}`,
       ) ?? qualityGate.reasons;
-      const reviserModel = modelForTask(task, effort, candidates);
+      const reviserModel = preferredCandidate ?? modelForTask(task, effort, candidates);
       const revisionCall = await call(
         reviserModel,
         buildRevisionMessages(messages, draft, issues),
@@ -284,7 +289,7 @@ export async function* runAdaptivePipeline(
         message: 'Memperbaiki hasil berdasarkan evaluasi',
       };
 
-      const reviserModel = modelForTask(task, effort, candidates);
+      const reviserModel = preferredCandidate ?? modelForTask(task, effort, candidates);
       const revisionCall = await call(
         reviserModel,
         buildRevisionMessages(messages, draft, review.issues),

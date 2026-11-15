@@ -26,7 +26,7 @@ export function getModelRegistry(
   catalog: readonly ModelSpec[] = MODEL_CATALOG,
   options: { disabledModelIds?: readonly string[]; availabilityByModel?: Readonly<Record<string, Availability>> } = {},
 ): RegisteredModel[] {
-  const disabled = new Set(options.disabledModelIds ?? (process.env.SUMOPOD_DISABLED_MODELS ?? '').split(',').map(value => value.trim()).filter(Boolean));
+  const disabled = new Set(options.disabledModelIds ?? []);
   return catalog.map(model => ({
     ...model,
     provider: 'sumopod',

@@ -24,7 +24,7 @@ export type RunOptions = {
   onDiagnostic?: (record: { task: string; model: string; strategy: string; durationMs: number; outcome: string }) => void;
 };
 const personaInstructions = {
-  daily: 'Anda Smart Companion AET AI: bantu diskusi, penjelasan, perencanaan, dan eksplorasi secara jelas dan ramah.',
+  daily: 'Anda Smart Companion AET AI: bantu diskusi, penjelasan, perencanaan, dan eksplorasi secara jelas dan ramah. Jika ditanya tentang pembuat atau kreator AET AI, informasikan bahwa kreatornya adalah Andre Saputra (G21 Teknik Elektronika Telekomunikasi, AET angkatan 16), dengan portofolio https://andresptr.site/, GitHub https://github.com/andre-sptr, LinkedIn https://www.linkedin.com/in/andre-sptr/, dan Instagram https://www.instagram.com/andree.sptrr/.',
   report: 'Anda Academic Writer AET AI: bantu tulisan akademik dan analisis terstruktur. Jangan mengarang kutipan, jurnal, DOI, atau data. Bedakan sumber yang benar-benar tersedia dari saran penelitian.',
   coding: 'Anda Coding Expert AET AI: jelaskan kode dan debugging secara teliti. Nyatakan asumsi dan jangan mengklaim program sudah dijalankan atau diuji jika tidak dilakukan.',
 };
@@ -163,24 +163,27 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
       yield { event: 'metadata', data: { model: 'none', strategy: 'tool-unavailable', taskType: task.taskType } };
       yield { event: 'delta', data: { text: `${results[0]!.text}\n\nSaya tidak dapat memverifikasi informasi dari sumber tersebut. Coba lagi setelah layanan tersedia, atau berikan isi sumber untuk dianalisis.` } };
     } else {
-      let messages = messagesFor(request, systemText(request, task, results));
+      const baseSystemPrompt = systemText(request, task, results);
+      let messages: ProviderMessage[];
       let promptPreparationMetrics: ReturnType<typeof preparePrompt>['metrics'] | undefined;
       if (promptPreparationEnabled) {
         const promptTask = routerV2 ? task as TaskProfile : classifyHybridHeuristically(request);
-        const prepared = preparePrompt(request, systemText(request, task, results), promptTask, {
+        const prepared = preparePrompt(request, baseSystemPrompt, promptTask, {
           maxContextCharacters: model.maxContextCharacters,
           reserveCharacters: 1_000,
         });
         messages = prepared.messages;
         promptPreparationMetrics = prepared.metrics;
         yield { event: 'status', data: { message: 'Mengoptimalkan instruksi dan konteks percakapan' } };
+      } else {
+        messages = messagesFor(request, baseSystemPrompt);
       }
       const useAdaptiveOrchestration =
         routerV2 &&
         multiModelEnabled &&
         (task as TaskProfile).complexity === 'complex' &&
         request.effort !== 'fast' &&
-        strategy.maxModelCalls - calls >= 4;
+        strategy.maxModelCalls - calls >= 3;
 
       if (useAdaptiveOrchestration) {
         yield { event: 'status', data: { message: 'Menjalankan adaptive multi-model orchestration' } };
@@ -190,6 +193,7 @@ export async function* orchestrate(request: ChatRequest, options: RunOptions = {
           messages,
           task: task as TaskProfile,
           effort: request.effort,
+          preferredModelId: activeSettings ? model.id : undefined,
           candidates: getModelRegistry(adaptiveCatalog).filter(candidate =>
             candidate.enabled && candidate.availability !== 'unavailable' &&
             (!((task as TaskProfile).requiredCapabilities.vision) || candidate.vision) &&

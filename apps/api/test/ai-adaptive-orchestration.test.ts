@@ -290,3 +290,87 @@ test('quality-enabled pipeline keeps evaluator-unavailable state explicit', asyn
   assert.equal(result?.reviewed, false);
   assert.equal(result?.answer, 'Draft jawaban.');
 });
+
+test('adaptive pipeline preserves admin preferredModelId ahead of re-ranked fallback candidates', async () => {
+  const calls: ProviderRequest[] = [];
+  const provider = fakeProvider([
+    JSON.stringify({
+      subtasks: [
+        { title: 'Bagian menulis', instruction: 'Susun ringkasan tertulis.', taskType: 'writing' },
+      ],
+    }),
+    'Draf tulisan awal.',
+    '{"revise":true,"issues":["Tambahkan kesimpulan singkat."]}',
+    'Draf tulisan final.',
+  ], calls);
+
+  const customRegistry = getModelRegistry([
+    { id: 'operator/custom-think', strengths: ['general'], speed: 'fast', vision: false, maxContextCharacters: 96_000 },
+    { id: 'gpt-4.1-mini', strengths: ['writing', 'coding', 'research'], speed: 'balanced', vision: false, maxContextCharacters: 96_000 },
+    { id: 'gpt-5-mini', strengths: ['coding', 'math', 'research', 'general'], speed: 'deep', vision: false, maxContextCharacters: 96_000 },
+  ]);
+
+  let result: Extract<AdaptivePipelineEvent, { type: 'result' }> | undefined;
+  for await (const event of runAdaptivePipeline({
+    provider,
+    messages: [
+      { role: 'system', content: 'System prompt.' },
+      { role: 'user', content: 'Analisis penelitian mendalam.' },
+    ],
+    task: taskProfile(),
+    effort: 'think',
+    preferredModelId: 'operator/custom-think',
+    candidates: customRegistry,
+    signal: new AbortController().signal,
+    maxModelCalls: 5,
+    maxOutputTokens: 1500,
+  })) {
+    if (event.type === 'result') result = event;
+  }
+
+  assert.ok(result);
+  assert.equal(result?.answer, 'Draf tulisan final.');
+  assert.equal(result?.finalModel, 'operator/custom-think');
+  assert.deepEqual(calls.map(call => call.model.id), [
+    'operator/custom-think',
+    'operator/custom-think',
+    'operator/custom-think',
+    'operator/custom-think',
+  ]);
+});
+
+test('adaptive pipeline caps generation to 1 subtask under a 3-call budget even when planner returns 2 subtasks', async () => {
+  const calls: ProviderRequest[] = [];
+  const provider = fakeProvider([
+    JSON.stringify({
+      subtasks: [
+        { title: 'Bagian 1', instruction: 'Kerjakan bagian 1.', taskType: 'research' },
+        { title: 'Bagian 2', instruction: 'Kerjakan bagian 2.', taskType: 'writing' },
+      ],
+    }),
+    'Hasil bagian 1.',
+    '{"revise":false,"issues":[]}',
+  ], calls);
+
+  let result: Extract<AdaptivePipelineEvent, { type: 'result' }> | undefined;
+  for await (const event of runAdaptivePipeline({
+    provider,
+    messages: [
+      { role: 'system', content: 'System prompt.' },
+      { role: 'user', content: 'Analisis penelitian.' },
+    ],
+    task: taskProfile(),
+    effort: 'normal',
+    candidates: getModelRegistry(),
+    signal: new AbortController().signal,
+    maxModelCalls: 3,
+    maxOutputTokens: 1000,
+  })) {
+    if (event.type === 'result') result = event;
+  }
+
+  assert.ok(result);
+  assert.equal(result?.callsUsed, 3);
+  assert.equal(result?.subtasks, 1);
+  assert.equal(result?.answer, 'Hasil bagian 1.');
+});
