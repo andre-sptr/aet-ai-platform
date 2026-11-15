@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import Fastify from 'fastify';
 import { registerAiRoutes } from '../src/ai/routes.js';
 import type { AiProvider } from '../src/ai/provider.js';
+import { isMissingAiSettingsTable } from '../src/repository.js';
 
 const chat = { persona: 'daily', effort: 'normal', messages: [{ role: 'user', content: 'Halo' }] };
 test('manual model panel is authenticated, explicit-only, flexible-ID and strictly validated', async () => {
@@ -153,4 +154,27 @@ test('closing HTTP stream propagates cancellation to upstream provider', async (
     controller.abort(); await reader.cancel().catch(() => undefined);
     await Promise.race([aborted, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error('upstream did not observe cancellation')), 2000); })]);
   } finally { if (timer) clearTimeout(timer); controller.abort(); await app.close(); }
+});
+
+test('isMissingAiSettingsTable detects raw pg, Prisma P2021, and adapter-pg P2010 TableDoesNotExist errors', () => {
+  assert.equal(isMissingAiSettingsTable({ code: '42P01' }), true);
+  assert.equal(isMissingAiSettingsTable({ code: 'P2021' }), true);
+  assert.equal(isMissingAiSettingsTable({ code: 'P2010', meta: { code: '42P01' } }), true);
+  assert.equal(
+    isMissingAiSettingsTable({
+      code: 'P2010',
+      meta: { driverAdapterError: { cause: { kind: 'TableDoesNotExist', table: 'AiSetting' } } },
+    }),
+    true,
+  );
+  assert.equal(
+    isMissingAiSettingsTable({
+      code: 'P2010',
+      meta: { driverAdapterError: { cause: { originalCode: '42P01' } } },
+    }),
+    true,
+  );
+  assert.equal(isMissingAiSettingsTable(new Error('relation "AiSetting" does not exist')), true);
+  assert.equal(isMissingAiSettingsTable({ code: 'P2002', message: 'Unique constraint failed' }), false);
+  assert.equal(isMissingAiSettingsTable(null), false);
 });

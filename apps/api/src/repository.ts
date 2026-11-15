@@ -25,10 +25,28 @@ export interface Repository {
   close?(): Promise<void>;
 }
 
-function isMissingAiSettingsTable(error: unknown): boolean {
+export function isMissingAiSettingsTable(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
-  const record = error as { code?: string; meta?: { code?: string } };
-  return record.code === '42P01' || (record.code === 'P2010' && record.meta?.code === '42P01');
+  const record = error as {
+    code?: string;
+    message?: string;
+    meta?: {
+      code?: string;
+      driverAdapterError?: {
+        cause?: {
+          kind?: string;
+          originalCode?: string;
+        };
+      };
+    };
+  };
+  if (record.code === '42P01' || record.code === 'P2021') return true;
+  if (record.code === 'P2010') {
+    if (record.meta?.code === '42P01') return true;
+    const cause = record.meta?.driverAdapterError?.cause;
+    if (cause?.kind === 'TableDoesNotExist' || cause?.originalCode === '42P01') return true;
+  }
+  return typeof record.message === 'string' && /relation ["']?AiSetting["']? does not exist/i.test(record.message);
 }
 
 function serialize(record: unknown): ContentRecord {
