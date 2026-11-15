@@ -93,7 +93,8 @@ export function AuroraBackdrop() {
 }
 
 export default function PublicShell({ children }: { children: React.ReactNode }) {
-  return <><PublicNavigation /><main id="main-content" className="public-main"><AuroraBackdrop />{children}</main><PublicFooter /></>;
+  // Keep a single root wrapper so Next.js route scroll restoration never calls scrollIntoView on the footer via a Fragment ref.
+  return <div className="public-shell"><PublicNavigation /><main id="main-content" className="public-main"><AuroraBackdrop />{children}</main><PublicFooter /></div>;
 }
 
 export function PageIntro({ eyebrow, title, description, index }: { eyebrow: string; title: React.ReactNode; description: string; index: string }) {

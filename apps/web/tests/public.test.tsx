@@ -14,6 +14,7 @@ mock.module('next/link', { exports: { default: function MockLink({ prefetch: _pr
 mock.module('next/navigation', { exports: { usePathname: () => '/' } });
 const { render, fireEvent, cleanup } = await import('@testing-library/react');
 const { default: Landing } = await import('../components/Landing');
+const { default: PublicShell } = await import('../components/PublicShell');
 const { NewsCollection } = await import('../components/PublicCollections');
 const { default: PublicDetail } = await import('../components/PublicDetail');
 const { safeImageUrl } = await import('../components/SafeImage');
@@ -85,4 +86,13 @@ test('public image URLs reject executable schemes and credential-bearing destina
   assert.equal(safeImageUrl('//example.com/image.png'), null);
   assert.equal(safeImageUrl('/favicon.png'), '/favicon.png');
   assert.equal(safeImageUrl('https://example.com/image.png'), 'https://example.com/image.png');
+});
+
+test('PublicShell wraps navigation, main content, and footer inside a single root container for route scroll handling', () => {
+  const view = render(createElement(PublicShell, null, createElement('p', null, 'Konten uji')));
+  assert.equal(view.container.children.length, 1);
+  const root = view.container.firstElementChild!;
+  assert.ok(root.querySelector('header.public-header'));
+  assert.ok(root.querySelector('main#main-content'));
+  assert.ok(root.querySelector('footer.public-footer'));
 });

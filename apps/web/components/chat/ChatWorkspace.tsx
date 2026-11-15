@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft, Camera, Check, Code2, Copy, FileText, History, LoaderCircle, Menu, MessageCircle, Paperclip, PanelLeftClose, PanelLeftOpen, Pencil, Plus, RotateCcw, Search, Send, Square, ThumbsDown, ThumbsUp, Trash2, UserRound, X } from "lucide-react";
@@ -117,14 +117,20 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
   const [rename, setRename] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [viewAttachment, setViewAttachment] = useState<Attachment | null>(null);
+  const [attachMenuOpen, setAttachMenuOpen] = useState(false);
+  const attachMenuId = useId();
   const request = useRef<AbortController | null>(null);
   const uploadRequest = useRef<AbortController | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+  const attachTriggerRef = useRef<HTMLButtonElement>(null);
+  const collapseSidebarRef = useRef<HTMLButtonElement>(null);
+  const expandSidebarRef = useRef<HTMLButtonElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -173,6 +179,51 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [mobileSidebarOpen]);
+
+  const isAttachMenuOpen = attachMenuOpen && !busy && !uploading && loaded;
+  const syncInputHeight = useCallback(() => {
+    const element = inputRef.current;
+    if (!element) return;
+    element.style.overflowY = "hidden";
+    element.style.height = "auto";
+    const styles = window.getComputedStyle(element);
+    const lineHeight = Number.parseFloat(styles.lineHeight) || 22;
+    const paddingY = (Number.parseFloat(styles.paddingTop) || 0) + (Number.parseFloat(styles.paddingBottom) || 0);
+    const minHeight = Math.ceil(lineHeight + paddingY);
+    const maxHeight = Math.ceil(lineHeight * 4 + paddingY);
+    const scrollHeight = element.scrollHeight;
+    element.style.height = `${Math.min(Math.max(scrollHeight, minHeight), maxHeight)}px`;
+    element.style.overflowY = scrollHeight > maxHeight + 2 ? "auto" : "hidden";
+  }, []);
+
+  useEffect(() => {
+    syncInputHeight();
+  }, [input, syncInputHeight]);
+
+  useEffect(() => {
+    window.addEventListener("resize", syncInputHeight);
+    return () => window.removeEventListener("resize", syncInputHeight);
+  }, [syncInputHeight]);
+
+  useEffect(() => {
+    if (!isAttachMenuOpen) return;
+    const closeOnPointerDown = (event: PointerEvent) => {
+      if (event.target instanceof Node && attachMenuRef.current?.contains(event.target)) return;
+      setAttachMenuOpen(false);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setAttachMenuOpen(false);
+      attachTriggerRef.current?.focus();
+    };
+    window.addEventListener("pointerdown", closeOnPointerDown);
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.removeEventListener("pointerdown", closeOnPointerDown);
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isAttachMenuOpen]);
 
   function storeMessages(messages: LocalMessage[], conversationId: string, write = true) {
     const current = storeRef.current.conversations.find(item => item.id === conversationId);
@@ -254,6 +305,37 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
   function stopAndLeave() {
     request.current?.abort(); uploadRequest.current?.abort(); onBack();
   }
+  const afterFrame = (run: () => void) => {
+    if (typeof window.requestAnimationFrame === "function") window.requestAnimationFrame(run);
+    else window.setTimeout(run, 0);
+  };
+  function toggleSidebar(collapse: boolean, restoreFocus = false) {
+    setSidebarCollapsed(collapse);
+    if (!restoreFocus) return;
+    afterFrame(() => (collapse ? expandSidebarRef : collapseSidebarRef).current?.focus());
+  }
+  function openRenameDialog(conversation: { id: string; title: string }) {
+    setHistoryOpen(false);
+    setRename(conversation.title);
+    setRenameId(conversation.id);
+  }
+  function submitRename(event: FormEvent) {
+    event.preventDefault();
+    const title = rename.trim().slice(0, 100);
+    if (!title || !renameId) return;
+    const target = storeRef.current.conversations.find(item => item.id === renameId);
+    if (target) {
+      if (target.id === storeRef.current.activeId) {
+        commit(updateConversation(storeRef.current, { ...target, title }));
+      } else {
+        commit({
+          ...storeRef.current,
+          conversations: storeRef.current.conversations.map(item => item.id === target.id ? { ...item, title } : item),
+        });
+      }
+    }
+    setRenameId(null);
+  }
   function createConversation() {
     if (busy) return;
     const item = newConversation(activePersona);
@@ -293,7 +375,7 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
           <span className="chat-brand-word">AET <span>AI</span><i aria-hidden="true" /></span>
           <small>YOUR THINKING PARTNER</small>
         </button>
-        <button type="button" className="chat-icon chat-sidebar-collapse" aria-label={sidebarCollapsed ? "Perluas sidebar" : "Ciutkan sidebar"} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
+        <button ref={collapseSidebarRef} type="button" className="chat-icon chat-sidebar-collapse" aria-label="Ciutkan sidebar" title="Ciutkan sidebar" aria-expanded={!sidebarCollapsed} onClick={event => toggleSidebar(true, event.detail === 0)}><PanelLeftClose size={18} /></button>
         <button type="button" className="chat-icon chat-sidebar-mobile-close" aria-label="Tutup navigasi" onClick={() => setMobileSidebarOpen(false)}><X size={18} /></button>
       </div>
       <button type="button" className="chat-new" onClick={createConversation} disabled={busy || !loaded}>
@@ -332,6 +414,19 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
       <label className="chat-history-search-wrap"><Search size={15} /><input aria-label="Cari riwayat percakapan" className="chat-history-search" placeholder="Cari percakapan…" value={search} onChange={event => setSearch(event.target.value)} /></label>
       <div className="chat-sidebar-history">{historyGroups.length ? historyGroups.map(group => <section className="chat-history-group" key={group.label}><h2>{group.label}</h2>{group.items.map(item => <button type="button" key={item.id} disabled={busy} aria-current={item.id === active.id ? "true" : undefined} onClick={() => selectConversation(item.id)} title={item.title}><span className="chat-history-dot" />{item.title}</button>)}</section>) : <p className="chat-history-empty">{search ? "Tidak ada percakapan yang cocok." : "Percakapan baru akan muncul di sini."}</p>}</div>
       <div className="chat-sidebar-footer"><nav aria-label="Tautan AET"><Link href="/">Beranda</Link><Link href="/news/">Berita</Link><Link href="/events/">Kegiatan</Link></nav><p><span className="chat-local-indicator" /> Riwayat tersimpan lokal di perangkat ini.</p></div>
+      {sidebarCollapsed && !mobileSidebarOpen && (
+        <button
+          ref={expandSidebarRef}
+          type="button"
+          className="chat-sidebar-expand"
+          aria-label="Perluas sidebar"
+          title="Perluas sidebar"
+          aria-expanded={false}
+          onClick={event => toggleSidebar(false, event.detail === 0)}
+        >
+          <span className="chat-sidebar-expand-icon" aria-hidden="true"><PanelLeftOpen size={18} /></span>
+        </button>
+      )}
     </aside>
     <main id="chat-main" className="chat-main">
       <AuroraBackdrop />
@@ -346,10 +441,8 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
           </div>
         </div>
         <div className="chat-topbar-actions">
-          <button type="button" className="chat-icon chat-desktop-collapse" aria-label={sidebarCollapsed ? "Perluas sidebar" : "Ciutkan sidebar"} onClick={() => setSidebarCollapsed(value => !value)}>{sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button>
-          <button type="button" className="chat-icon" aria-label="Percakapan baru" onClick={createConversation} disabled={busy || !loaded}><Plus size={18} /></button>
           <button type="button" className="chat-icon" aria-label="Buka riwayat" onClick={() => setHistoryOpen(true)} disabled={!loaded}><History size={18} /></button>
-          <button type="button" className="chat-icon" aria-label="Ganti nama percakapan" onClick={() => { setRename(active.title); setRenameOpen(true); }} disabled={busy || !loaded}><Pencil size={16} /></button>
+          <button type="button" className="chat-icon" aria-label="Ganti nama percakapan" onClick={() => openRenameDialog(active)} disabled={busy || !loaded}><Pencil size={16} /></button>
           <button type="button" className="chat-icon chat-danger" aria-label="Hapus percakapan" onClick={() => setDeleteId(active.id)} disabled={busy || !loaded}><Trash2 size={17} /></button>
         </div>
       </header>
@@ -369,18 +462,70 @@ export default function ChatWorkspace({ initialPersona, onBack }: { initialPerso
         {storageError && <p className="chat-feedback chat-feedback-error" role="alert">{storageError}</p>}
         {editId && <div className="chat-feedback">Mengedit pesan. Jawaban setelah pesan ini akan diganti.<button type="button" onClick={() => { setEditId(null); setInput(""); setAttachments([]); }}>Batal edit</button></div>}
         {attachments.length > 0 && <div className="chat-pending-attachments">{attachments.map(item => <div key={item.id}><button type="button" className="chat-attachment-name" onClick={() => item.dataUrl ? setViewAttachment(item) : undefined}>{item.dataUrl ? <Image src={item.dataUrl} alt="" width={38} height={38} unoptimized /> : <FileText size={20} />}<span>{item.name}</span></button><button type="button" className="chat-icon" aria-label={`Hapus lampiran ${item.name}`} onClick={() => setAttachments(items => items.filter(attachment => attachment.id !== item.id))}><X size={15} /></button></div>)}</div>}
-        <form onSubmit={submit} className="chat-composer"><label htmlFor="aet-chat-input" className="sr-only">Pesan untuk {config.title}</label><textarea id="aet-chat-input" ref={inputRef} placeholder={`Kirim pesan ke ${config.title}…`} value={input} maxLength={20_000} rows={2} disabled={busy || !loaded} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
-          <div className="chat-composer-toolbar"><div className="chat-composer-tools"><button type="button" className="chat-icon" aria-label="Lampirkan dokumen atau gambar" disabled={busy || uploading || !loaded} onClick={() => fileRef.current?.click()}>{uploading ? <LoaderCircle size={18} className="chat-spin" /> : <Paperclip size={18} />}</button><button type="button" className="chat-icon" aria-label="Ambil gambar dari kamera" disabled={busy || uploading || !loaded} onClick={() => cameraRef.current?.click()}><Camera size={18} /></button><span className="chat-key-hint" aria-hidden="true"><kbd>Enter</kbd> kirim · <kbd>Shift+Enter</kbd> baris baru</span></div>
-            <div className="chat-composer-controls"><fieldset className="chat-effort" disabled={busy}><legend className="sr-only">Mode respons</legend>{([['fast', 'Fast', 'Cepat'], ['normal', 'Normal', 'Seimbang'], ['think', 'Think', 'Analisis mendalam']] as const).map(([value, label, description]) => <label key={value} className={effort === value ? "selected" : ""} title={description}><input type="radio" name="chat-effort" value={value} checked={effort === value} onChange={() => setEffort(value)} /><span>{label}</span></label>)}</fieldset><button type={busy ? "button" : "submit"} className={`chat-send${busy ? " is-stop" : ""}`} aria-label={busy ? "Hentikan jawaban" : "Kirim pesan"} title={busy ? "Hentikan jawaban" : "Kirim pesan"} disabled={!busy && (uploading || !loaded || !input.trim() && !attachments.length)} onClick={busy ? () => request.current?.abort() : undefined}>{busy ? <Square size={14} fill="currentColor" /> : <Send size={17} />}</button></div>
-          </div>
+        <form onSubmit={submit} className="chat-composer">
+          <div className="chat-composer-tools"><div
+            ref={attachMenuRef}
+            className="chat-attach-wrap"
+            onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setAttachMenuOpen(false); }}
+          >
+            <button
+              ref={attachTriggerRef}
+              type="button"
+              className={`chat-icon chat-attach-trigger${isAttachMenuOpen ? " is-open" : ""}`}
+              aria-label="Tambah lampiran"
+              title="Tambah lampiran"
+              aria-haspopup="menu"
+              aria-expanded={isAttachMenuOpen}
+              aria-controls={isAttachMenuOpen ? attachMenuId : undefined}
+              disabled={busy || uploading || !loaded}
+              onClick={() => setAttachMenuOpen(open => !open)}
+              onKeyDown={event => {
+                if (event.key !== "ArrowDown") return;
+                event.preventDefault();
+                setAttachMenuOpen(true);
+                afterFrame(() => attachMenuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus());
+              }}
+            >
+              {uploading ? <LoaderCircle size={18} className="chat-spin" /> : <Plus size={18} strokeWidth={2.2} />}
+            </button>
+            {isAttachMenuOpen && (
+              <div
+                id={attachMenuId}
+                className="chat-attach-dropdown"
+                role="menu"
+                aria-label="Opsi lampiran"
+                onKeyDown={event => {
+                  if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+                  const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'));
+                  if (!items.length) return;
+                  event.preventDefault();
+                  const index = items.indexOf(document.activeElement as HTMLButtonElement);
+                  const next = event.key === "ArrowDown" ? (index + 1) % items.length : (index - 1 + items.length) % items.length;
+                  items[next].focus();
+                }}
+              >
+                <button type="button" role="menuitem" className="chat-attach-option" onClick={() => { setAttachMenuOpen(false); fileRef.current?.click(); }}>
+                  <Paperclip size={16} aria-hidden="true" />
+                  <span>Tambah file</span>
+                </button>
+                <button type="button" role="menuitem" className="chat-attach-option" onClick={() => { setAttachMenuOpen(false); cameraRef.current?.click(); }}>
+                  <Camera size={16} aria-hidden="true" />
+                  <span>Tambah foto</span>
+                </button>
+              </div>
+            )}
+          </div></div>
+          <label htmlFor="aet-chat-input" className="sr-only">Pesan untuk {config.title}</label>
+          <textarea id="aet-chat-input" ref={inputRef} placeholder="Minta AET AI…" value={input} maxLength={20_000} rows={1} disabled={busy || !loaded} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) { event.preventDefault(); submit(); } }} />
+          <div className="chat-composer-controls"><fieldset className="chat-effort" disabled={busy}><legend className="sr-only">Mode respons</legend>{([['fast', 'Fast', 'Cepat'], ['normal', 'Normal', 'Seimbang'], ['think', 'Think', 'Analisis mendalam']] as const).map(([value, label, description]) => <label key={value} className={effort === value ? "selected" : ""} title={description}><input type="radio" name="chat-effort" value={value} checked={effort === value} onChange={() => setEffort(value)} /><span>{label}</span></label>)}</fieldset><button type={busy ? "button" : "submit"} className={`chat-send${busy ? " is-stop" : ""}`} aria-label={busy ? "Hentikan jawaban" : "Kirim pesan"} title={busy ? "Hentikan jawaban" : "Kirim pesan"} disabled={!busy && (uploading || !loaded || !input.trim() && !attachments.length)} onClick={busy ? () => request.current?.abort() : undefined}>{busy ? <Square size={14} fill="currentColor" /> : <Send size={17} />}</button></div>
         </form>
         <input ref={fileRef} type="file" accept={accepted} onChange={selectFile} hidden aria-label="Pilih lampiran" /><input ref={cameraRef} type="file" accept="image/png,image/jpeg,image/webp" capture="environment" onChange={selectFile} hidden aria-label="Pilih foto kamera" />
         {uploading && <p role="status" className="chat-progress">Memvalidasi dan membaca lampiran…</p>}{busy && <p role="status" aria-live="polite" className="chat-progress">{status}</p>}
         <p className="chat-disclaimer">AI dapat melakukan kesalahan. Periksa kembali informasi penting.</p>
       </div></div>
     </main>
-    {historyOpen && <ChatDialog title="Percakapan tersimpan" onClose={() => setHistoryOpen(false)}><p className="chat-dialog-note">Riwayat per mode tersimpan di browser ini.</p><button type="button" className="chat-new" disabled={busy} onClick={createConversation}><Plus size={16} /> Percakapan baru</button><input className="chat-history-search" aria-label="Cari percakapan tersimpan" placeholder="Cari percakapan…" value={search} onChange={event => setSearch(event.target.value)} /><div className="chat-dialog-history">{history.map(item => <div key={item.id}><button type="button" disabled={busy} aria-current={item.id === active.id ? "true" : undefined} onClick={() => { selectConversation(item.id); setHistoryOpen(false); }}>{item.title}</button><button type="button" className="chat-icon chat-danger" disabled={busy} aria-label={`Hapus ${item.title}`} onClick={() => { setHistoryOpen(false); setDeleteId(item.id); }}><Trash2 size={16} /></button></div>)}</div></ChatDialog>}
-    {renameOpen && <ChatDialog title="Ganti nama percakapan" onClose={() => setRenameOpen(false)}><form onSubmit={event => { event.preventDefault(); if (!rename.trim()) return; const current = storeRef.current.conversations.find(item => item.id === storeRef.current.activeId)!; commit(updateConversation(storeRef.current, { ...current, title: rename.trim().slice(0, 100) })); setRenameOpen(false); }}><label className="chat-field">Nama percakapan<input value={rename} maxLength={100} required onChange={event => setRename(event.target.value)} /></label><div className="chat-dialog-actions"><button type="button" onClick={() => setRenameOpen(false)}>Batal</button><button type="submit" className="chat-primary">Simpan nama</button></div></form></ChatDialog>}
+    {historyOpen && <ChatDialog title="Percakapan tersimpan" onClose={() => setHistoryOpen(false)}><p className="chat-dialog-note">Riwayat per mode tersimpan di browser ini.</p><button type="button" className="chat-new" disabled={busy} onClick={createConversation}><Plus size={16} /> Percakapan baru</button><input className="chat-history-search" aria-label="Cari percakapan tersimpan" placeholder="Cari percakapan…" value={search} onChange={event => setSearch(event.target.value)} /><div className="chat-dialog-history">{history.map(item => <div key={item.id}><button type="button" disabled={busy} aria-current={item.id === active.id ? "true" : undefined} onClick={() => { selectConversation(item.id); setHistoryOpen(false); }}>{item.title}</button><button type="button" className="chat-icon" disabled={busy} aria-label={`Ganti nama ${item.title}`} onClick={() => openRenameDialog(item)}><Pencil size={16} /></button><button type="button" className="chat-icon chat-danger" disabled={busy} aria-label={`Hapus ${item.title}`} onClick={() => { setHistoryOpen(false); setDeleteId(item.id); }}><Trash2 size={16} /></button></div>)}</div></ChatDialog>}
+    {renameId && <ChatDialog title="Ganti nama percakapan" onClose={() => setRenameId(null)}><form onSubmit={submitRename}><label className="chat-field">Nama percakapan<input value={rename} maxLength={100} required onChange={event => setRename(event.target.value)} /></label><div className="chat-dialog-actions"><button type="button" onClick={() => setRenameId(null)}>Batal</button><button type="submit" className="chat-primary">Simpan nama</button></div></form></ChatDialog>}
     {deleteId && <ChatDialog title="Hapus percakapan ini?" onClose={() => setDeleteId(null)}><p>Percakapan <strong>{store.conversations.find(item => item.id === deleteId)?.title}</strong> akan dihapus dari browser ini. Tindakan ini tidak dapat dibatalkan.</p><div className="chat-dialog-actions"><button type="button" onClick={() => setDeleteId(null)}>Batal</button><button type="button" className="chat-delete" onClick={() => { commit(deleteConversation(storeRef.current, deleteId, activePersona)); setDeleteId(null); setError(""); setInput(""); setAttachments([]); setEditId(null); }}>Hapus percakapan</button></div></ChatDialog>}
     {viewAttachment?.dataUrl && <ChatDialog title={viewAttachment.name} onClose={() => setViewAttachment(null)}><Image src={viewAttachment.dataUrl} width={1400} height={1000} unoptimized alt={viewAttachment.name} style={{ width: "100%", height: "auto" }} /></ChatDialog>}
   </div>;

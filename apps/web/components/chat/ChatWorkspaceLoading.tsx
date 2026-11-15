@@ -112,7 +112,6 @@ export default function ChatWorkspaceLoading({ persona = "coding" }: { persona?:
             <span className="chat-skeleton chat-skeleton-action" />
             <span className="chat-skeleton chat-skeleton-action" />
             <span className="chat-skeleton chat-skeleton-action" />
-            <span className="chat-skeleton chat-skeleton-action" />
           </div>
         </header>
 
@@ -142,19 +141,15 @@ export default function ChatWorkspaceLoading({ persona = "coding" }: { persona?:
         <div className="chat-composer-area" aria-hidden="true">
           <div className="chat-composer-inner">
             <div className="chat-composer chat-loading-composer">
+              <div className="chat-loading-composer-tools">
+                <span className="chat-skeleton chat-skeleton-action" />
+              </div>
               <div className="chat-loading-composer-input">
                 <span className="chat-skeleton chat-skeleton-line" />
-                <span className="chat-skeleton chat-skeleton-line is-short" />
               </div>
-              <div className="chat-composer-toolbar">
-                <div className="chat-loading-composer-tools">
-                  <span className="chat-skeleton chat-skeleton-action" />
-                  <span className="chat-skeleton chat-skeleton-action" />
-                </div>
-                <div className="chat-loading-composer-controls">
-                  <span className="chat-skeleton chat-skeleton-effort" />
-                  <span className="chat-skeleton chat-skeleton-send" />
-                </div>
+              <div className="chat-loading-composer-controls">
+                <span className="chat-skeleton chat-skeleton-effort" />
+                <span className="chat-skeleton chat-skeleton-send" />
               </div>
             </div>
             <p className="chat-disclaimer">AI dapat melakukan kesalahan. Periksa kembali informasi penting.</p>
