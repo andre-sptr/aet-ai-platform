@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { ArrowUpRight, CalendarDays, FlaskConical, LayoutDashboard, LogOut, Menu, Newspaper, Users } from "lucide-react";
+import { ArrowUpRight, CalendarDays, FlaskConical, LayoutDashboard, LoaderCircle, LockKeyhole, LogOut, Menu, Newspaper, Users } from "lucide-react";
 import { api } from "../../lib/api";
 import { AdminDialog } from "./AdminDialog";
 import "./admin.css";
@@ -94,8 +94,68 @@ export function AdminShell({ children }: { children: ReactNode }) {
       </div>
     </>
   );
-  if (checking) return <main id="main-content" className="admin-session-state" role="status">Memeriksa sesi administrator…</main>;
-  if (!user) return <main id="main-content" className="admin-session-state"><h1>Masuk ke workspace</h1>{error ? <><p role="alert">{error}</p><button type="button" className="button button-secondary" onClick={() => { setChecking(true); setError(""); setRevision((n) => n + 1); }}>Coba lagi</button></> : <p>Anda memerlukan sesi administrator untuk membuka halaman ini.</p>}<Link href="/login/" className="button button-primary">Ke halaman masuk</Link></main>;
+  if (checking) {
+    return (
+      <main id="main-content" className="admin-session-state" role="status">
+        <div className="admin-session-card">
+          <div className="admin-session-brand">
+            <span className="admin-wordmark">
+              aet<span>ai.</span>
+              <small>CONTENT WORKSPACE</small>
+            </span>
+          </div>
+          <div className="admin-session-spinner" aria-hidden="true">
+            <LoaderCircle size={24} className="animate-spin" />
+          </div>
+          <p className="admin-session-title">Memeriksa sesi administrator…</p>
+          <p className="admin-session-subtitle">Menghubungkan ke layanan autentikasi workspace.</p>
+        </div>
+      </main>
+    );
+  }
+  if (!user) {
+    return (
+      <main id="main-content" className="admin-session-state">
+        <div className="admin-session-card">
+          <div className="admin-session-brand">
+            <span className="admin-wordmark">
+              aet<span>ai.</span>
+              <small>CONTENT WORKSPACE</small>
+            </span>
+          </div>
+          <div className="admin-session-icon" aria-hidden="true">
+            <LockKeyhole size={22} />
+          </div>
+          <h1>Masuk ke workspace</h1>
+          {error ? (
+            <p className="admin-feedback admin-feedback-error" role="alert">
+              {error}
+            </p>
+          ) : (
+            <p className="admin-session-subtitle">Anda memerlukan sesi administrator untuk membuka halaman ini.</p>
+          )}
+          <div className="admin-session-actions">
+            {error && (
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => {
+                  setChecking(true);
+                  setError("");
+                  setRevision((n) => n + 1);
+                }}
+              >
+                Coba lagi
+              </button>
+            )}
+            <Link href="/login/" className="button button-primary">
+              Ke halaman masuk
+            </Link>
+          </div>
+        </div>
+      </main>
+    );
+  }
   return <div className="aet-admin"><a className="skip-link" href="#main-content">Lewati navigasi admin</a><aside className="admin-rail"><Link href="/admin/" className="admin-wordmark">aet<span>ai.</span><small>CONTENT WORKSPACE</small></Link>{navigation}</aside>
     <div className="admin-mobile-header"><Link className="admin-wordmark" href="/admin/">aet<span>ai.</span></Link><button type="button" className="icon-button" aria-label="Buka menu admin" aria-expanded={menu} aria-controls={menu ? "admin-mobile-nav" : undefined} onClick={() => setMenu(true)}><Menu size={22} aria-hidden="true" /></button></div>
     {menu && <AdminDialog id="admin-mobile-nav" className="admin-nav-dialog" title="AET Admin" onClose={() => setMenu(false)}>{navigation}</AdminDialog>}
